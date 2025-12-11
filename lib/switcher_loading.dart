@@ -42,7 +42,7 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) =>
-                DeviceDashboard(),
+                DashboardScreen(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
               const begin = Offset(1.0, 0.0);

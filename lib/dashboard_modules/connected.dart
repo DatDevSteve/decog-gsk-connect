@@ -1,9 +1,8 @@
+import 'package:decog_gsk/device_list.dart';
 import 'package:decog_gsk/diagnosis_page.dart';
+import 'package:decog_gsk/switcher_loading.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-import '../device_list.dart';
-
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -12,37 +11,53 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color.fromRGBO(28, 49, 50, 1),
+      appBar: AppBar(
+        backgroundColor: const Color.fromRGBO(28, 49, 50, 1),
+        title: Text(
+          'D A S H B O A R D',
+          style: GoogleFonts.ibmPlexSans(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            color: const Color.fromRGBO(215, 162, 101, 1),
+            letterSpacing: 4,
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios,
+            color: Color.fromRGBO(215, 162, 101, 1),
+            size: 24,
+          ),
+          onPressed: () {
+            Navigator.of(context).pushReplacement(
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    DeviceList(),
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                  const begin = Offset(1.0, 0.0);
+                  const end = Offset.zero;
+                  const curve = Curves.ease;
+                  var tween = Tween(
+                    begin: begin,
+                    end: end,
+                  ).chain(CurveTween(curve: curve));
+                  return SlideTransition(
+                    position: animation.drive(tween),
+                    child: child,
+                  );
+                },
+                transitionDuration: Duration(milliseconds: 500),
+              ),
+            );
+          },
+        ),
+      ),
       body: SafeArea(
         child: Column(
           children: [
             // Header with back button and title
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.arrow_back_ios,
-                      color: Color.fromRGBO(215, 162, 101, 1),
-                      size: 24,
-                    ),
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'DASHBOARD',
-                    style: GoogleFonts.ibmPlexSans(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
-                      color: const Color.fromRGBO(215, 162, 101, 1),
-                      letterSpacing: 4,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+
 
             const SizedBox(height: 40),
 
@@ -54,20 +69,30 @@ class DashboardScreen extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    const Color.fromRGBO(180, 255, 180, 1),
-                    const Color.fromRGBO(100, 200, 100, 1).withOpacity(0.6),
-                    const Color.fromRGBO(28, 49, 50, 1).withOpacity(0.2),
+                    const Color.fromRGBO(200, 255, 200, 1),
+                    const Color.fromRGBO(120, 220, 120, 1),
+                    const Color.fromRGBO(80, 180, 80, 1),
+                    const Color.fromRGBO(28, 49, 50, 1),
                   ],
-                  stops: const [0.0, 0.7, 1.0],
+                  stops: const [0.0, 0.4, 0.7, 1.0],
                 ),
               ),
-              child: Center(
-                child: ClipOval(
+              child: ClipOval(
+                child: Container(
+                  padding: const EdgeInsets.all(40),
+                  decoration: BoxDecoration(
+                    color: const Color.fromRGBO(28, 49, 50, 1).withOpacity(0.3),
+                  ),
                   child: Image.asset(
-                    'lib/assets/device_disconnected.png',
-                    width: 120,
-                    height: 280,
+                    'lib/assets/device_connected.jpg',
                     fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(
+                        Icons.developer_board,
+                        size: 100,
+                        color: Colors.white70,
+                      );
+                    },
                   ),
                 ),
               ),
@@ -125,7 +150,7 @@ class DashboardScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.4),
+                        color: Color.fromRGBO(215, 162, 101, 1),
                         width: 2,
                       ),
                     ),
@@ -136,7 +161,7 @@ class DashboardScreen extends StatelessWidget {
                         size: 28,
                       ),
                       onPressed: () {
-                        // Handle power button action
+                        Navigator.pop(context);
                       },
                     ),
                   ),
@@ -150,18 +175,23 @@ class DashboardScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.4),
-                        width: 2,
+                        color: Color.fromRGBO(215, 162, 101, 1),
+                        width: 3,
                       ),
                     ),
                     child: IconButton(
                       icon: const Icon(
-                        Icons.phone_in_talk,
+                        Icons.settings,
                         color: Colors.white,
                         size: 28,
                       ),
                       onPressed: () {
-                        // Handle phone/diagnosis action
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const DiagnosisPage(),
+                          ),
+                        );
                       },
                     ),
                   ),

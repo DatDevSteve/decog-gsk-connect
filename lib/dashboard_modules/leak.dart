@@ -4,8 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../device_list.dart';
 
-class DeviceDashboard extends StatelessWidget {
-  const DeviceDashboard({super.key});
+class DeviceLeak extends StatelessWidget {
+  const DeviceLeak({super.key});
 
   @override
   Widget build(BuildContext context) {

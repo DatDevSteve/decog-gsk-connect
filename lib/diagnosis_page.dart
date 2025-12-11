@@ -1,4 +1,5 @@
 import 'package:decog_gsk/dashboard_modules/threshold_slider_widget.dart';
+import 'package:decog_gsk/switcher_loading.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -34,7 +35,7 @@ class _DiagnosisPageState extends State<DiagnosisPage> {
                   Navigator.of(context).pushReplacement(
                     PageRouteBuilder(
                       pageBuilder: (context, animation, secondaryAnimation) =>
-                          DeviceList(),
+                          LoadingSwitch(),
                       transitionsBuilder:
                           (context, animation, secondaryAnimation, child) {
                         const begin = Offset(-1.0, 0.0);
