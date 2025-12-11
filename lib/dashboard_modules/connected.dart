@@ -1,11 +1,67 @@
 import 'package:decog_gsk/device_list.dart';
+import 'dart:async';
 import 'package:decog_gsk/diagnosis_page.dart';
 import 'package:decog_gsk/switcher_loading.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  final supabase = Supabase.instance.client;
+  Timer? _gasLevelTimer;
+  int _gasLevel = 0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchGasLevel(); // Fetch immediately on load
+    _startGasLevelUpdates(); // Start periodic updates
+  }
+
+  @override
+  void dispose() {
+    _gasLevelTimer?.cancel(); // Clean up timer
+    super.dispose();
+  }
+
+  void _startGasLevelUpdates() {
+    _gasLevelTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      _fetchGasLevel();
+    });
+  }
+
+  Future<void> _fetchGasLevel() async {
+    try {
+      final response = await supabase
+          .from('sensor_live')
+          .select('gas_level')
+          .order('timestamp', ascending: false)
+          .limit(1)
+          .single();
+
+      if (mounted) {
+        setState(() {
+          _gasLevel = response['gas_level'] as int;
+          _isLoading = false;
+        });
+      }
+    } catch (error) {
+      debugPrint('Error fetching gas level: $error');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -136,15 +192,40 @@ class DashboardScreen extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // Status label
-            Text(
-              'STATUS',
-              style: GoogleFonts.dmSans(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
-                letterSpacing: 1.5,
-              ),
+            const SizedBox(height: 30),
+
+            // Gas Level Display
+            Column(
+              children: [
+                _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color.fromRGBO(215, 162, 101, 1),
+                        ),
+                      )
+                    : Text(
+                        '$_gasLevel PPM',
+                        style: GoogleFonts.dmSans(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w700,
+                          color: const Color.fromRGBO(215, 162, 101, 1),
+                          letterSpacing: 1,
+                        ),
+                      ),
+                const SizedBox(height: 8),
+                Text(
+                  'GAS LEVEL',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ],
             ),
 
             const Spacer(),

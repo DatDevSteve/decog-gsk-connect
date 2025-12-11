@@ -25,21 +25,22 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
 
   Future<void> _checkDeviceStatus() async {
     try {
-      // Fetch the latest timestamp from sensor_live table
+      // Fetch the latest timestamp and status from sensor_live table
       final response = await supabase
           .from("sensor_live")
           .select('timestamp, status')
           .order('timestamp', ascending: false)
           .limit(1)
           .single();
-      //Fetch Leak Status from sensor_live table
-      final status = (response['status'] as String).toUpperCase();
-      debugPrint(status);
+
       if (!mounted) return;
 
       // Parse the timestamp from the database
       final String timestampStr = response['timestamp'] as String;
       final DateTime lastUpdate = DateTime.parse(timestampStr);
+
+      // Get the status value
+      final String status = (response['status'] as String).toUpperCase();
 
       // Get current time
       final DateTime now = DateTime.now();
@@ -50,21 +51,24 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
       debugPrint('Last update was $secondsSinceLastUpdate seconds ago');
       debugPrint('Last timestamp: $lastUpdate');
       debugPrint('Current time: $now');
-      debugPrint('Gas Level: $status');
+      debugPrint('Status: $status');
 
       // Check if device is online (less than 20 seconds since last update)
       final bool isOnline = secondsSinceLastUpdate <= 20;
 
-      if (isOnline) {
-        // Device is online - navigate to DashboardScreen (connected)
-        _navigateToDashboard();
-      }
-      else if (status == "HIGH") {
-        _navigateToLeak();
-      }
-      else {
+      // CORRECTED LOGIC: Check offline first, then status
+      if (!isOnline) {
         // Device is offline - navigate to DisconnectedDev
+        debugPrint('Navigating to: DisconnectedDev (offline)');
         _navigateToDisconnected();
+      } else if (status == 'HIGH') {
+        // Gas leak detected - navigate to LeakScreen
+        debugPrint('Navigating to: LeakScreen (HIGH status)');
+        _navigateToLeak();
+      } else {
+        // Status is LOW or NORMAL - navigate to DashboardScreen (connected)
+        debugPrint('Navigating to: DashboardScreen (NORMAL/LOW status)');
+        _navigateToDashboard();
       }
     } catch (error) {
       // Handle errors (network issues, database errors, etc.)
@@ -84,6 +88,7 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
       _navigateToDisconnected();
     }
   }
+
 
   void _navigateToDashboard() {
     if (!mounted) return;
