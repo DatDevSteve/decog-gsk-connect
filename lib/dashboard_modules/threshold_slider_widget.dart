@@ -118,7 +118,7 @@ class _ThresholdSliderWidgetState extends State<ThresholdSliderWidget> {
                 const SizedBox(width: 12),
                 Text(
                   'Gas Threshold Control',
-                  style: GoogleFonts.ibmPlexSans(
+                  style: GoogleFonts.dmSans(
                     color: Colors.white,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -144,7 +144,7 @@ class _ThresholdSliderWidgetState extends State<ThresholdSliderWidget> {
                 children: [
                   Text(
                     'Current Threshold:',
-                    style: GoogleFonts.ibmPlexSans(color: Colors.white, fontSize: 16),
+                    style: GoogleFonts.dmSans(color: Colors.white, fontSize: 16),
                   ),
                   Text(
                     '${_currentThreshold.toInt()}',
@@ -162,7 +162,7 @@ class _ThresholdSliderWidgetState extends State<ThresholdSliderWidget> {
             // Slider
             Row(
               children: [
-                Text('Low\n(300)', textAlign: TextAlign.center, style: GoogleFonts.ibmPlexSans(color: Colors.white, fontSize: 12)),
+                Text('Low\n(300)', textAlign: TextAlign.center, style: GoogleFonts.dmSans(color: Colors.white, fontSize: 12)),
                 Expanded(
                   child: Slider(
                     value: _currentThreshold,
@@ -181,7 +181,7 @@ class _ThresholdSliderWidgetState extends State<ThresholdSliderWidget> {
                     },
                   ),
                 ),
-                Text('High\n(900)', textAlign: TextAlign.center, style: GoogleFonts.ibmPlexSans(color: Colors.white, fontSize: 12)),
+                Text('High\n(900)', textAlign: TextAlign.center, style: GoogleFonts.dmSans(color: Colors.white, fontSize: 12)),
               ],
             ),
 
@@ -190,7 +190,7 @@ class _ThresholdSliderWidgetState extends State<ThresholdSliderWidget> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 'Drag slider to adjust gas leak detection threshold',
-                style: GoogleFonts.ibmPlexSans(
+                style: GoogleFonts.dmSans(
                   fontSize: 12,
                   color: gold,
                 ),
@@ -224,7 +224,7 @@ class _ThresholdSliderWidgetState extends State<ThresholdSliderWidget> {
                     Expanded(
                       child: Text(
                         _statusMessage,
-                        style: GoogleFonts.ibmPlexSans(
+                        style: GoogleFonts.dmSans(
                           color: _statusMessage.contains('Error')
                               ? Colors.red
                               : Colors.green,
@@ -261,7 +261,7 @@ class _ThresholdSliderWidgetState extends State<ThresholdSliderWidget> {
               const SizedBox(width: 8),
               Text(
                 'Threshold Guide',
-                style: GoogleFonts.ibmPlexSans(
+                style: GoogleFonts.dmSans(
                   fontWeight: FontWeight.bold,
                   color: gold,
                 ),
@@ -293,11 +293,11 @@ class _ThresholdSliderWidgetState extends State<ThresholdSliderWidget> {
           const SizedBox(width: 8),
           Text(
             '$range: ',
-            style: GoogleFonts.ibmPlexSans(color: gold, fontSize: 12, fontWeight: FontWeight.bold),
+            style: GoogleFonts.dmSans(color: gold, fontSize: 12, fontWeight: FontWeight.bold),
           ),
           Text(
             description,
-            style: GoogleFonts.ibmPlexSans(fontSize: 12, color: gold),
+            style: GoogleFonts.dmSans(fontSize: 12, color: gold),
           ),
         ],
       ),

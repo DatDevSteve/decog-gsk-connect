@@ -3,7 +3,6 @@ import 'package:decog_gsk/dashboard_modules/leak.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dashboard_modules/disconnected.dart';
-import 'diagnosis_page.dart';
 
 class LoadingSwitch extends StatefulWidget {
   const LoadingSwitch({super.key});
@@ -26,83 +25,113 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
 
   Future<void> _checkDeviceStatus() async {
     try {
-      // Fetch device status from Supabase
+      // Fetch the latest timestamp from sensor_live table
       final response = await supabase
           .from("sensor_live")
-          .select('sensor_online')
+          .select('timestamp')
+          .order('timestamp', ascending: false)
+          .limit(1)
           .single();
 
       if (!mounted) return;
 
-      // Check the status and navigate accordingly
-      final bool isConnected = response['sensor_online'] as bool;
+      // Parse the timestamp from the database
+      final String timestampStr = response['timestamp'] as String;
+      final DateTime lastUpdate = DateTime.parse(timestampStr);
 
-      if (isConnected) {
-        // Navigate to DeviceDashboard if connected
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                DashboardScreen(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              const begin = Offset(1.0, 0.0);
-              const end = Offset.zero;
-              const curve = Curves.ease;
-              var tween = Tween(
-                begin: begin,
-                end: end,
-              ).chain(CurveTween(curve: curve));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
-            transitionDuration: Duration(milliseconds: 500),
-          ),
-        );
+      // Get current time
+      final DateTime now = DateTime.now();
+
+      // Calculate the difference in seconds
+      final int secondsSinceLastUpdate = now.difference(lastUpdate).inSeconds;
+
+      debugPrint('Last update was $secondsSinceLastUpdate seconds ago');
+      debugPrint('Last timestamp: $lastUpdate');
+      debugPrint('Current time: $now');
+
+      // Check if device is online (less than 20 seconds since last update)
+      final bool isOnline = secondsSinceLastUpdate <= 20;
+
+      if (isOnline) {
+        // Device is online - navigate to DashboardScreen (connected)
+        _navigateToDashboard();
       } else {
-        // Navigate to DisconnectedDev if not connected
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                DisconnectedDev(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              const begin = Offset(1.0, 0.0);
-              const end = Offset.zero;
-              const curve = Curves.ease;
-              var tween = Tween(
-                begin: begin,
-                end: end,
-              ).chain(CurveTween(curve: curve));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
-            transitionDuration: Duration(milliseconds: 500),
-          ),
-        );
+        // Device is offline - navigate to DisconnectedDev
+        _navigateToDisconnected();
       }
     } catch (error) {
       // Handle errors (network issues, database errors, etc.)
+      debugPrint('Error checking device status: $error');
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error checking device status: $error')),
+        SnackBar(
+          content: Text('Error checking device status: $error'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
       );
 
-      // Navigate to error/disconnected screen
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => DisconnectedDev()),
-      );
+      // Navigate to disconnected screen on error
+      _navigateToDisconnected();
     }
-  }  // ← MISSING closing brace was here
+  }
+
+  void _navigateToDashboard() {
+    if (!mounted) return;
+
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+        DashboardScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.ease;
+          var tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: curve));
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
+  }
+
+  void _navigateToDisconnected() {
+    if (!mounted) return;
+
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+        DisconnectedDev(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.ease;
+          var tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: curve));
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color.fromRGBO(28, 49, 50, 1),
+      backgroundColor: const Color.fromRGBO(28, 49, 50, 1),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -111,11 +140,11 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
-                color: Color.fromRGBO(215, 162, 101, 1),
+                color: const Color.fromRGBO(215, 162, 101, 1),
               ),
               width: 60,
               height: 60,
-              child: Center(
+              child: const Center(
                 child: CircularProgressIndicator(
                   strokeCap: StrokeCap.round,
                   color: Color.fromRGBO(28, 49, 50, 1),

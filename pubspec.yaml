@@ -8,6 +8,8 @@ environment:
 
 assets:
   - "lib/assets/device_connected.jpg"
+  - "lib/assets/device_disconnected.jpg"
+  - "lib/assets/device_leak.jpg"
 
 dependencies:
   flutter:

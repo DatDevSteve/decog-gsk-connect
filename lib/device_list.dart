@@ -21,7 +21,9 @@ class _DeviceListState extends State<DeviceList> {
     // REMOVED MaterialApp - just return Scaffold
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: Color.fromRGBO(28, 49, 50, 1),
+
       ),
       backgroundColor: Color.fromRGBO(28, 49, 50, 1),
       body: Padding(
