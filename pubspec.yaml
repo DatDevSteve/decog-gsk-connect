@@ -1,5 +1,5 @@
-name: gas_detector_app
-description: "A new Flutter project."
+name: decog_gsk
+description: "App for controlling Decog GSK001 Series"
 publish_to: 'none'
 version: 0.1.0
 
@@ -10,11 +10,22 @@ dependencies:
   flutter:
     sdk: flutter
   google_fonts: ^6.3.2
+  supabase_flutter: ^2.10.3
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.13.1
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
 
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo.png"
+  adaptive_icon_background: "#FFFFFF"  # Background color
+  adaptive_icon_foreground: "lib/assets/logo.png"  # Your logo
+
 flutter:
   uses-material-design: true
+  assets:
+    - lib/assets/device_disconnected.png
