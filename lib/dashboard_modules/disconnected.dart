@@ -1,11 +1,32 @@
 import 'package:decog_gsk/device_list.dart';
 import 'package:decog_gsk/diagnosis_page.dart';
+import 'package:decog_gsk/status_monitor.dart';
 import 'package:decog_gsk/switcher_loading.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class DisconnectedDev extends StatelessWidget {
+class DisconnectedDev extends StatefulWidget {
   const DisconnectedDev({super.key});
+
+  @override
+  State<DisconnectedDev> createState() => _DisconnectedDevState();
+}
+
+class _DisconnectedDevState extends State<DisconnectedDev> {
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_){
+      StatusMonitor.startMonitoring(context);
+    });
+  }
+
+  @override
+  void dispose(){
+    StatusMonitor.stopMonitoring();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

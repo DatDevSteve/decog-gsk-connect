@@ -3,9 +3,32 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../device_list.dart';
+import '../status_monitor.dart';
 
-class DeviceLeak extends StatelessWidget {
+class DeviceLeak extends StatefulWidget {
   const DeviceLeak({super.key});
+
+  @override
+  State<DeviceLeak> createState() => _DeviceLeakState();
+}
+
+class _DeviceLeakState extends State<DeviceLeak> {
+
+  @override
+  void initState() {
+    super.initState();
+    // START MONITORING
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      StatusMonitor.startMonitoring(context);
+    });
+  }
+
+  @override
+  void dispose() {
+    StatusMonitor.stopMonitoring();  // STOP MONITORING
+    super.dispose();
+  }
+
 
   @override
   Widget build(BuildContext context) {

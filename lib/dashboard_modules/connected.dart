@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../status_monitor.dart';
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -22,13 +24,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchGasLevel(); // Fetch immediately on load
-    _startGasLevelUpdates(); // Start periodic updates
+    _fetchGasLevel();
+    _startGasLevelUpdates();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      StatusMonitor.startMonitoring(context);
+    });
   }
 
   @override
   void dispose() {
-    _gasLevelTimer?.cancel(); // Clean up timer
+    _gasLevelTimer?.cancel();
+    StatusMonitor.stopMonitoring();
     super.dispose();
   }
 

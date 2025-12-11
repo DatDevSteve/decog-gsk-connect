@@ -1,3 +1,4 @@
+import 'package:decog_gsk/status_monitor.dart';
 import 'package:decog_gsk/switcher_loading.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -14,11 +15,17 @@ class _DeviceListState extends State<DeviceList> {
   Color clickBorder = Color.fromRGBO(36, 68, 67, 1);
 
   @override
+  void initState() {
+    super.initState();
+    StatusMonitor.stopMonitoring();  // Stop monitoring on device list
+  }
+
+  @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
 
-    // REMOVED MaterialApp - just return Scaffold
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
