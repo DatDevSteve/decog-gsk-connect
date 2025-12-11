@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.decog.gskconnect"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36  // Required for Android 16 compatibility
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -24,10 +24,10 @@ android {
         applicationId = "com.decog.gskconnect"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        minSdk = flutter.minSdkVersion  // Explicit minimum SDK for better compatibility
+        targetSdk = 35  // Target Android 16
+        versionCode = 1
+        versionName = "0.1.0"
     }
 
     buildTypes {

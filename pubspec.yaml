@@ -21,11 +21,11 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/logo.png"
+  image_path: "lib/assets/logo.png"
   adaptive_icon_background: "#FFFFFF"  # Background color
   adaptive_icon_foreground: "lib/assets/logo.png"  # Your logo
 
 flutter:
   uses-material-design: true
   assets:
-    - lib/assets/device_disconnected.png
+    - lib/assets/

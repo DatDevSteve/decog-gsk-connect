@@ -1,4 +1,5 @@
 import 'package:decog_gsk/dashboard_modules/connected.dart';
+import 'package:decog_gsk/dashboard_modules/leak.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dashboard_modules/disconnected.dart';
@@ -37,11 +38,11 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
       final bool isConnected = response['sensor_online'] as bool;
 
       if (isConnected) {
-        // Navigate to DiagnosisPage if connected
+        // Navigate to DeviceDashboard if connected
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) =>
-                DiagnosisPage(),
+                DeviceDashboard(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
               const begin = Offset(1.0, 0.0);
