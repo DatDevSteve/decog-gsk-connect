@@ -22,10 +22,6 @@ class _DeviceListState extends State<DeviceList> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Color.fromRGBO(28, 49, 50, 1),
-        leading: IconButton(  // Add back button
-          icon: Icon(Icons.arrow_back, color: Color.fromRGBO(215, 162, 101, 1)),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
       ),
       backgroundColor: Color.fromRGBO(28, 49, 50, 1),
       body: Padding(
