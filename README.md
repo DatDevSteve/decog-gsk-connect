@@ -1,3 +1,7 @@
-# gas_detector_app
+# Decog GSK Connect 
 
-A new Flutter project.
+Mobile App for controlling the Gas Sensor Kit. <br> 
+A part of CBSE 2025 Science Exhibition Project.
+
+# App Screenshots
+
