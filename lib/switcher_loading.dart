@@ -28,11 +28,13 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
       // Fetch the latest timestamp from sensor_live table
       final response = await supabase
           .from("sensor_live")
-          .select('timestamp')
+          .select('timestamp, status')
           .order('timestamp', ascending: false)
           .limit(1)
           .single();
-
+      //Fetch Leak Status from sensor_live table
+      final status = (response['status'] as String).toUpperCase();
+      debugPrint(status);
       if (!mounted) return;
 
       // Parse the timestamp from the database
@@ -48,6 +50,7 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
       debugPrint('Last update was $secondsSinceLastUpdate seconds ago');
       debugPrint('Last timestamp: $lastUpdate');
       debugPrint('Current time: $now');
+      debugPrint('Gas Level: $status');
 
       // Check if device is online (less than 20 seconds since last update)
       final bool isOnline = secondsSinceLastUpdate <= 20;
@@ -55,7 +58,11 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
       if (isOnline) {
         // Device is online - navigate to DashboardScreen (connected)
         _navigateToDashboard();
-      } else {
+      }
+      else if (status == "HIGH") {
+        _navigateToLeak();
+      }
+      else {
         // Device is offline - navigate to DisconnectedDev
         _navigateToDisconnected();
       }
@@ -84,7 +91,7 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-        DashboardScreen(),
+            DashboardScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(1.0, 0.0);
           const end = Offset.zero;
@@ -109,7 +116,7 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-        DisconnectedDev(),
+            DisconnectedDev(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(1.0, 0.0);
           const end = Offset.zero;
@@ -127,6 +134,32 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
       ),
     );
   }
+
+  void _navigateToLeak() {
+    if (!mounted) return;
+
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            DeviceLeak(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.ease;
+          var tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: curve));
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {

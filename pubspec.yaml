@@ -7,9 +7,9 @@ environment:
   sdk: ^3.9.2
 
 assets:
-  - "lib/assets/device_connected.jpg"
-  - "lib/assets/device_disconnected.jpg"
-  - "lib/assets/device_leak.jpg"
+  - "lib/assets/device_connected.png"
+  - "lib/assets/device_disconnected.png"
+  - "lib/assets/device_leak.png"
 
 dependencies:
   flutter:

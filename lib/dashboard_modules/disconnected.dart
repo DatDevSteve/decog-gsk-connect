@@ -92,9 +92,9 @@ class DisconnectedDev extends StatelessWidget {
                     ),
                     child: Center(
                       child: Image.asset(
-                        'lib/assets/device_connected.png',
-                        width: 140,
-                        height: 280,
+                        'lib/assets/device_disconnected.png',
+                        width: 540,
+                        height: 780,
                         fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) {
                           return const Icon(
@@ -149,7 +149,7 @@ class DisconnectedDev extends StatelessWidget {
                   color: Color.fromRGBO(139, 5, 5, 1),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Color.fromRGBO(245, 15, 15, 1),
+                    color: const Color.fromRGBO(245, 15, 15, 1),
                     width: 3,
                   ),
                 ),

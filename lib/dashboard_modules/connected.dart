@@ -37,18 +37,18 @@ class DashboardScreen extends StatelessWidget {
                     DeviceList(),
                 transitionsBuilder:
                     (context, animation, secondaryAnimation, child) {
-                  const begin = Offset(1.0, 0.0);
-                  const end = Offset.zero;
-                  const curve = Curves.ease;
-                  var tween = Tween(
-                    begin: begin,
-                    end: end,
-                  ).chain(CurveTween(curve: curve));
-                  return SlideTransition(
-                    position: animation.drive(tween),
-                    child: child,
-                  );
-                },
+                      const begin = Offset(1.0, 0.0);
+                      const end = Offset.zero;
+                      const curve = Curves.ease;
+                      var tween = Tween(
+                        begin: begin,
+                        end: end,
+                      ).chain(CurveTween(curve: curve));
+                      return SlideTransition(
+                        position: animation.drive(tween),
+                        child: child,
+                      );
+                    },
                 transitionDuration: Duration(milliseconds: 500),
               ),
             );
@@ -59,8 +59,6 @@ class DashboardScreen extends StatelessWidget {
         child: Column(
           children: [
             // Header with back button and title
-
-
             const SizedBox(height: 40),
 
             // Circular device image with gradient background
@@ -95,8 +93,8 @@ class DashboardScreen extends StatelessWidget {
                     child: Center(
                       child: Image.asset(
                         'lib/assets/device_connected.png',
-                        width: 140,
-                        height: 280,
+                        width: 540,
+                        height: 780,
                         fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) {
                           return const Icon(
@@ -175,7 +173,19 @@ class DashboardScreen extends StatelessWidget {
                         size: 28,
                       ),
                       onPressed: () {
-
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Work in Progress, Coming Soon!',
+                              style: GoogleFonts.dmSans(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            backgroundColor: Color.fromRGBO(215, 162, 101, 1),
+                            duration: const Duration(seconds: 3),
+                          ),
+                        );
                       },
                     ),
                   ),
@@ -212,7 +222,6 @@ class DashboardScreen extends StatelessWidget {
                 ],
               ),
             ),
-
           ],
         ),
       ),
