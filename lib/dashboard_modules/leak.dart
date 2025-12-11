@@ -19,13 +19,12 @@ class _DeviceLeakState extends State<DeviceLeak> {
     super.initState();
     // START MONITORING
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      StatusMonitor.startMonitoring(context);
+      StatusMonitor.startMonitoring();
     });
   }
 
   @override
   void dispose() {
-    StatusMonitor.stopMonitoring();  // STOP MONITORING
     super.dispose();
   }
 

@@ -28,14 +28,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _startGasLevelUpdates();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      StatusMonitor.startMonitoring(context);
+      StatusMonitor.startMonitoring();
     });
   }
 
   @override
   void dispose() {
     _gasLevelTimer?.cancel();
-    StatusMonitor.stopMonitoring();
     super.dispose();
   }
 

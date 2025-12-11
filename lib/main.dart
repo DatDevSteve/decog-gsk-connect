@@ -1,12 +1,11 @@
 import 'package:decog_gsk/device_list.dart';
+import 'package:decog_gsk/status_monitor.dart';  // ADD THIS
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() async {
-  // Ensure Flutter binding is initialized before any async operations
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Supabase with error handling
   try {
     await Supabase.initialize(
       url: 'https://mrqxzkaowylemjpqasdw.supabase.co',
@@ -15,7 +14,6 @@ void main() async {
     debugPrint('✓ Supabase initialized successfully');
   } catch (e) {
     debugPrint('✗ Supabase initialization error: $e');
-    // App will still run, but Supabase features won't work
   }
 
   runApp(const MainApp());
@@ -27,6 +25,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: StatusMonitor.navigatorKey,  // ADD THIS LINE
       debugShowCheckedModeBanner: false,
       title: 'Decog GSK',
       theme: ThemeData(

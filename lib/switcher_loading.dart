@@ -17,7 +17,6 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
   @override
   void initState() {
     super.initState();
-    // Wrap navigation call in addPostFrameCallback
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkDeviceStatus();
     });
@@ -25,7 +24,6 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
 
   Future<void> _checkDeviceStatus() async {
     try {
-      // Fetch the latest timestamp and status from sensor_live table
       final response = await supabase
           .from("sensor_live")
           .select('timestamp, status')
@@ -35,17 +33,10 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
 
       if (!mounted) return;
 
-      // Parse the timestamp from the database
       final String timestampStr = response['timestamp'] as String;
       final DateTime lastUpdate = DateTime.parse(timestampStr);
-
-      // Get the status value
       final String status = (response['status'] as String).toUpperCase();
-
-      // Get current time
       final DateTime now = DateTime.now();
-
-      // Calculate the difference in seconds
       final int secondsSinceLastUpdate = now.difference(lastUpdate).inSeconds;
 
       debugPrint('Last update was $secondsSinceLastUpdate seconds ago');
@@ -53,25 +44,19 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
       debugPrint('Current time: $now');
       debugPrint('Status: $status');
 
-      // Check if device is online (less than 20 seconds since last update)
       final bool isOnline = secondsSinceLastUpdate <= 20;
 
-      // CORRECTED LOGIC: Check offline first, then status
       if (!isOnline) {
-        // Device is offline - navigate to DisconnectedDev
         debugPrint('Navigating to: DisconnectedDev (offline)');
         _navigateToDisconnected();
       } else if (status == 'HIGH') {
-        // Gas leak detected - navigate to LeakScreen
         debugPrint('Navigating to: LeakScreen (HIGH status)');
         _navigateToLeak();
       } else {
-        // Status is LOW or NORMAL - navigate to DashboardScreen (connected)
         debugPrint('Navigating to: DashboardScreen (NORMAL/LOW status)');
         _navigateToDashboard();
       }
     } catch (error) {
-      // Handle errors (network issues, database errors, etc.)
       debugPrint('Error checking device status: $error');
 
       if (!mounted) return;
@@ -84,11 +69,9 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
         ),
       );
 
-      // Navigate to disconnected screen on error
       _navigateToDisconnected();
     }
   }
-
 
   void _navigateToDashboard() {
     if (!mounted) return;
@@ -96,7 +79,7 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            DashboardScreen(),
+        const DashboardScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(1.0, 0.0);
           const end = Offset.zero;
@@ -121,7 +104,7 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            DisconnectedDev(),
+        const DisconnectedDev(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(1.0, 0.0);
           const end = Offset.zero;
@@ -146,7 +129,7 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            DeviceLeak(),
+        const DeviceLeak(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(1.0, 0.0);
           const end = Offset.zero;
@@ -164,7 +147,6 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
       ),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {

@@ -18,13 +18,12 @@ class _DisconnectedDevState extends State<DisconnectedDev> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_){
-      StatusMonitor.startMonitoring(context);
+      StatusMonitor.startMonitoring();
     });
   }
 
   @override
   void dispose(){
-    StatusMonitor.stopMonitoring();
     super.dispose();
   }
 

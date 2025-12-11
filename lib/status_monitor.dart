@@ -1,26 +1,27 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../dashboard_modules/connected.dart';
-import '../dashboard_modules/disconnected.dart';
-import '../dashboard_modules/leak.dart';
+import 'dashboard_modules/connected.dart';
+import 'dashboard_modules/disconnected.dart';
+import 'dashboard_modules/leak.dart';
 
 class StatusMonitor {
   static Timer? _statusTimer;
   static String? _currentScreen;
   static final supabase = Supabase.instance.client;
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   // Start monitoring
-  static void startMonitoring(BuildContext context) {
+  static void startMonitoring() {
     debugPrint('📡 Status monitoring started');
 
     // Check immediately
-    _checkAndNavigate(context);
+    _checkAndNavigate();
 
     // Then check every 3 seconds
     _statusTimer?.cancel();
     _statusTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      _checkAndNavigate(context);
+      _checkAndNavigate();
     });
   }
 
@@ -33,7 +34,7 @@ class StatusMonitor {
   }
 
   // Check status and navigate if needed
-  static Future<void> _checkAndNavigate(BuildContext context) async {
+  static Future<void> _checkAndNavigate() async {
     try {
       final response = await supabase
           .from('sensor_live')
@@ -41,8 +42,6 @@ class StatusMonitor {
           .order('timestamp', ascending: false)
           .limit(1)
           .single();
-
-      if (!context.mounted) return;
 
       final String timestampStr = response['timestamp'] as String;
       final DateTime lastUpdate = DateTime.parse(timestampStr);
@@ -66,9 +65,9 @@ class StatusMonitor {
       if (_currentScreen != targetScreen) {
         debugPrint('🔄 Status changed: $_currentScreen -> $targetScreen');
         _currentScreen = targetScreen;
-        _navigateToScreen(context, targetScreen);
+        _navigateToScreen(targetScreen);
       } else {
-        debugPrint('✓ Status unchanged: $targetScreen (${secondsSinceLastUpdate}s ago)');
+        debugPrint('✓ Status unchanged: $targetScreen (${secondsSinceLastUpdate}s ago, status: $status)');
       }
     } catch (error) {
       debugPrint('❌ Status check error: $error');
@@ -76,8 +75,12 @@ class StatusMonitor {
   }
 
   // Navigate to the appropriate screen
-  static void _navigateToScreen(BuildContext context, String screen) {
-    if (!context.mounted) return;
+  static void _navigateToScreen(String screen) {
+    final context = navigatorKey.currentContext;
+    if (context == null) {
+      debugPrint('⚠️ Navigator context is null');
+      return;
+    }
 
     Widget targetWidget;
 
