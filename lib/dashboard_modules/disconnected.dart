@@ -178,7 +178,7 @@ class _DisconnectedDevState extends State<DisconnectedDev> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(5, 5, 5, 1),
+                      padding: const EdgeInsets.fromLTRB(5, 5, 5, 0),
                       child: Text(
                         "Device Disconnected",
                         style: GoogleFonts.dmSans(
@@ -189,7 +189,7 @@ class _DisconnectedDevState extends State<DisconnectedDev> {
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
+                      padding: const EdgeInsets.fromLTRB(5, 1, 5, 5),
                       child: Text(
                         "Unable to connect with device. Please check station module for battery or any other issues.",
                         style: GoogleFonts.dmSans(

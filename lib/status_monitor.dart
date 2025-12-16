@@ -10,6 +10,7 @@ class StatusMonitor {
   static String? _currentScreen;
   static final supabase = Supabase.instance.client;
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  static bool _isFirstCheck = true;  // ADD THIS FLAG
 
   // Start monitoring
   static void startMonitoring() {
@@ -31,6 +32,7 @@ class StatusMonitor {
     _statusTimer?.cancel();
     _statusTimer = null;
     _currentScreen = null;
+    _isFirstCheck = true;  // Reset flag when stopping
   }
 
   // Check status and navigate if needed
@@ -44,11 +46,22 @@ class StatusMonitor {
           .single();
 
       final String timestampStr = response['timestamp'] as String;
-      final DateTime lastUpdate = DateTime.parse(timestampStr);
+
+      // Parse as UTC timestamp (Supabase stores in UTC)
+      final DateTime lastUpdateUTC = DateTime.parse(timestampStr).toUtc();
+
+      // Get current time in UTC for accurate comparison
+      final DateTime nowUTC = DateTime.now().toUtc();
+
       final String status = (response['status'] as String).toUpperCase();
-      final DateTime now = DateTime.now();
-      final int secondsSinceLastUpdate = now.difference(lastUpdate).inSeconds;
+
+      // Calculate the difference in seconds
+      final int secondsSinceLastUpdate = nowUTC.difference(lastUpdateUTC).inSeconds;
       final bool isOnline = secondsSinceLastUpdate <= 20;
+
+      // Convert to local time for display purposes
+      final DateTime lastUpdateLocal = lastUpdateUTC.toLocal();
+      final DateTime nowLocal = nowUTC.toLocal();
 
       String targetScreen;
 
@@ -63,10 +76,25 @@ class StatusMonitor {
 
       // Only navigate if we need to switch screens
       if (_currentScreen != targetScreen) {
-        debugPrint('🔄 Status changed: $_currentScreen -> $targetScreen');
-        _currentScreen = targetScreen;
-        _navigateToScreen(targetScreen);
+        // Skip navigation on first check (we're already on correct screen from LoadingSwitch)
+        if (_isFirstCheck) {
+          debugPrint('📍 Initial screen set to: $targetScreen (skipping navigation)');
+          _currentScreen = targetScreen;
+          _isFirstCheck = false;
+        } else {
+          debugPrint('🔄 Status changed: $_currentScreen -> $targetScreen');
+          debugPrint('   Last update: $lastUpdateLocal (Local) / $lastUpdateUTC (UTC)');
+          debugPrint('   Current time: $nowLocal (Local) / $nowUTC (UTC)');
+          debugPrint('   Time diff: ${secondsSinceLastUpdate}s ago');
+          debugPrint('   Status: $status');
+          _currentScreen = targetScreen;
+          _navigateToScreen(targetScreen);
+        }
       } else {
+        // After first check, disable the flag
+        if (_isFirstCheck) {
+          _isFirstCheck = false;
+        }
         debugPrint('✓ Status unchanged: $targetScreen (${secondsSinceLastUpdate}s ago, status: $status)');
       }
     } catch (error) {

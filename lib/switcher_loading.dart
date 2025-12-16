@@ -34,14 +34,21 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
       if (!mounted) return;
 
       final String timestampStr = response['timestamp'] as String;
-      final DateTime lastUpdate = DateTime.parse(timestampStr);
+
+      // Parse as UTC timestamp (Supabase stores in UTC)
+      final DateTime lastUpdateUTC = DateTime.parse(timestampStr).toUtc();
+
+      // Get current time in UTC for accurate comparison
+      final DateTime nowUTC = DateTime.now().toUtc();
+
       final String status = (response['status'] as String).toUpperCase();
-      final DateTime now = DateTime.now();
-      final int secondsSinceLastUpdate = now.difference(lastUpdate).inSeconds;
+
+      // Calculate the difference in seconds
+      final int secondsSinceLastUpdate = nowUTC.difference(lastUpdateUTC).inSeconds;
 
       debugPrint('Last update was $secondsSinceLastUpdate seconds ago');
-      debugPrint('Last timestamp: $lastUpdate');
-      debugPrint('Current time: $now');
+      debugPrint('Last timestamp (UTC): $lastUpdateUTC');
+      debugPrint('Current time (UTC): $nowUTC');
       debugPrint('Status: $status');
 
       final bool isOnline = secondsSinceLastUpdate <= 20;
@@ -72,6 +79,7 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
       _navigateToDisconnected();
     }
   }
+
 
   void _navigateToDashboard() {
     if (!mounted) return;

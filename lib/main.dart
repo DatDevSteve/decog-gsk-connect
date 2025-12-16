@@ -1,10 +1,17 @@
 import 'package:decog_gsk/device_list.dart';
-import 'package:decog_gsk/status_monitor.dart';  // ADD THIS
+import 'package:decog_gsk/status_monitor.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';  // ADD THIS IMPORT
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Lock orientation to portrait only
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   try {
     await Supabase.initialize(
@@ -25,7 +32,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      navigatorKey: StatusMonitor.navigatorKey,  // ADD THIS LINE
+      navigatorKey: StatusMonitor.navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Decog GSK',
       theme: ThemeData(
