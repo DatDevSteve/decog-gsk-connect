@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:decog_gsk/dashboard_modules/sensor_disconnected.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dashboard_modules/connected.dart';
@@ -40,7 +41,7 @@ class StatusMonitor {
     try {
       final response = await supabase
           .from('sensor_live')
-          .select('timestamp, status')
+          .select('timestamp, status, sensor_online')
           .order('timestamp', ascending: false)
           .limit(1)
           .single();
@@ -52,6 +53,8 @@ class StatusMonitor {
 
       // Get current time in UTC for accurate comparison
       final DateTime nowUTC = DateTime.now().toUtc();
+
+      final bool sensorOnline = response['sensor_online'];
 
       final String status = (response['status'] as String).toUpperCase();
 
@@ -72,6 +75,10 @@ class StatusMonitor {
         targetScreen = 'leak';
       } else {
         targetScreen = 'connected';
+      }
+
+      if (!sensorOnline) {
+        targetScreen = "sensor_disconnected";
       }
 
       // Only navigate if we need to switch screens
@@ -113,6 +120,9 @@ class StatusMonitor {
     Widget targetWidget;
 
     switch (screen) {
+      case 'sensor_disconnected':
+        targetWidget = const SensorDisconnected();
+        break;
       case 'leak':
         targetWidget = const DeviceLeak();
         break;

@@ -5,15 +5,15 @@ import 'package:decog_gsk/switcher_loading.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class DisconnectedDev extends StatefulWidget {
-  const DisconnectedDev({super.key});
+
+class SensorDisconnected extends StatefulWidget {
+  const SensorDisconnected({super.key});
 
   @override
-  State<DisconnectedDev> createState() => _DisconnectedDevState();
+  State<SensorDisconnected> createState() => _SensorDisconnectedState();
 }
 
-class _DisconnectedDevState extends State<DisconnectedDev> {
-
+class _SensorDisconnectedState extends State<SensorDisconnected> {
   @override
   void initState() {
     super.initState();
@@ -57,18 +57,18 @@ class _DisconnectedDevState extends State<DisconnectedDev> {
                     DeviceList(),
                 transitionsBuilder:
                     (context, animation, secondaryAnimation, child) {
-                      const begin = Offset(1.0, 0.0);
-                      const end = Offset.zero;
-                      const curve = Curves.ease;
-                      var tween = Tween(
-                        begin: begin,
-                        end: end,
-                      ).chain(CurveTween(curve: curve));
-                      return SlideTransition(
-                        position: animation.drive(tween),
-                        child: child,
-                      );
-                    },
+                  const begin = Offset(1.0, 0.0);
+                  const end = Offset.zero;
+                  const curve = Curves.ease;
+                  var tween = Tween(
+                    begin: begin,
+                    end: end,
+                  ).chain(CurveTween(curve: curve));
+                  return SlideTransition(
+                    position: animation.drive(tween),
+                    child: child,
+                  );
+                },
                 transitionDuration: Duration(milliseconds: 500),
               ),
             );
@@ -112,7 +112,7 @@ class _DisconnectedDevState extends State<DisconnectedDev> {
                     ),
                     child: Center(
                       child: Image.asset(
-                        'lib/assets/device_disconnected.png',
+                        'lib/assets/device_connected.png',
                         width: 540,
                         height: 780,
                         fit: BoxFit.contain,
@@ -142,7 +142,7 @@ class _DisconnectedDevState extends State<DisconnectedDev> {
 
                 child: Center(
                   child: Text(
-                    'DEVICE DISCONNECTED',
+                    'SENSOR DISCONNECTED',
                     style: GoogleFonts.dmSans(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
@@ -159,7 +159,7 @@ class _DisconnectedDevState extends State<DisconnectedDev> {
 
             const Spacer(),
 
-            // Bottom action message
+            // Bottom action buttons
             Padding(
               padding: const EdgeInsets.only(bottom: 40.0),
               child: Container(
@@ -191,7 +191,7 @@ class _DisconnectedDevState extends State<DisconnectedDev> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(5, 1, 5, 5),
                       child: Text(
-                        "Unable to connect with device. Please check station module for battery or any other issues.",
+                        "Unable to connect with device. Please check station module for low battery or any issues.",
                         style: GoogleFonts.dmSans(
                           color: Colors.white,
                           fontSize: 16,
