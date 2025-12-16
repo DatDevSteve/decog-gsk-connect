@@ -77,6 +77,7 @@ class _SensorDisconnectedState extends State<SensorDisconnected> {
       ),
       body: SafeArea(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Header with back button and title
             const SizedBox(height: 40),
@@ -147,7 +148,7 @@ class _SensorDisconnectedState extends State<SensorDisconnected> {
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
-                      letterSpacing: 2,
+                      letterSpacing: 0,
                     ),
                   ),
                 ),
@@ -180,7 +181,7 @@ class _SensorDisconnectedState extends State<SensorDisconnected> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(5, 5, 5, 0),
                       child: Text(
-                        "Device Disconnected",
+                        "Sensor Disconnected",
                         style: GoogleFonts.dmSans(
                           fontWeight: FontWeight.bold,
                           fontSize: 22,
@@ -191,7 +192,7 @@ class _SensorDisconnectedState extends State<SensorDisconnected> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(5, 1, 5, 5),
                       child: Text(
-                        "Unable to connect with device. Please check station module for low battery or any issues.",
+                        "Unable to connect with sensor. Please check sensor module for low battery or any issues.",
                         style: GoogleFonts.dmSans(
                           color: Colors.white,
                           fontSize: 16,

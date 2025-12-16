@@ -70,16 +70,18 @@ class StatusMonitor {
 
       // Determine which screen should be showing
       if (!isOnline) {
-        targetScreen = 'disconnected';
+        if (!sensorOnline) {
+          targetScreen = "sensor_disconnected";
+        } else {
+          targetScreen = 'disconnected';
+        }
       } else if (status == 'HIGH') {
         targetScreen = 'leak';
       } else {
         targetScreen = 'connected';
       }
 
-      if (!sensorOnline) {
-        targetScreen = "sensor_disconnected";
-      }
+
 
       // Only navigate if we need to switch screens
       if (_currentScreen != targetScreen) {
