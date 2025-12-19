@@ -10,7 +10,7 @@ class SupabaseConfig {
   // Raspberry Pi (Local Hub) credentials via Tailscale
   // Replace with your actual Raspberry Pi Tailscale IP and credentials
   static const String localUrl = 'http://100.111.59.127:8000';  // Your Tailscale IP
-  static const String localAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY1MjE4NjAwLCJleHAiOjE5MjI5ODUwMDB9.cyJ3hGci0iJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY1MjE4NjAwLCJleHAiOjE5MjI5ODUwMDB9';
+  static const String localAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY2MTQ2NTMwLCJleHAiOjIwODE1MDY1MzB9.zWVf3-iC6j-VTo9YHm_4xGaKvaY4HgmlGBuvC9yO3pQ';
 
   // Preference key
   static const String _prefKey = 'use_decog_hub';
