@@ -14,7 +14,6 @@ class DeviceList extends StatefulWidget {
 class _DeviceListState extends State<DeviceList> {
   bool showButton = false;
   bool useDecogHub = false;
-  bool autoSwitch = true;
   bool isLoading = true;
   Color clickBorder = const Color.fromRGBO(36, 68, 67, 1);
   Map<String, dynamic>? connectionStatus;
@@ -23,24 +22,33 @@ class _DeviceListState extends State<DeviceList> {
   void initState() {
     super.initState();
     StatusMonitor.stopMonitoring();
+
+    // Set up auto-switch callback
+
     _loadPreferences();
   }
+
+  @override
+  void dispose() {
+    // Clean up callback
+    SupabaseConfig.onAutoSwitch = null;
+    super.dispose();
+  }
+
 
   // Load saved preferences and check connection
   Future<void> _loadPreferences() async {
     final isLocal = await SupabaseConfig.isUsingLocalHub();
-    final autoSwitchEnabled = await SupabaseConfig.getAutoSwitch();
     final status = await SupabaseConfig.getConnectionStatus();
 
     setState(() {
       useDecogHub = isLocal;
-      autoSwitch = autoSwitchEnabled;
       connectionStatus = status;
       isLoading = false;
     });
   }
 
-  // Toggle hub preference
+  // Toggle hub preference manually
   Future<void> _toggleHub(bool value) async {
     setState(() {
       isLoading = true;
@@ -61,8 +69,8 @@ class _DeviceListState extends State<DeviceList> {
           SnackBar(
             content: Text(
               value
-                  ? '✓ Switched to Decog Hub (Local Server)'
-                  : '✓ Switched to Cloud Server',
+                  ? '✓ Switched to Decog Hub'
+                  : '✓ Switched to Decog Cloud',
               style: GoogleFonts.dmSans(
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -70,8 +78,11 @@ class _DeviceListState extends State<DeviceList> {
             ),
             backgroundColor: const Color.fromRGBO(215, 162, 101, 1),
             duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
           ),
-        );
+        ));
       }
     } catch (e) {
       if (mounted) {
@@ -90,34 +101,13 @@ class _DeviceListState extends State<DeviceList> {
             ),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
           ),
-        );
+        ));
       }
     }
-  }
-
-  // Toggle auto-switch preference
-  Future<void> _toggleAutoSwitch(bool value) async {
-    await SupabaseConfig.setAutoSwitch(value);
-    setState(() {
-      autoSwitch = value;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          value
-              ? '✓ Auto-switch enabled'
-              : '✓ Auto-switch disabled',
-          style: GoogleFonts.dmSans(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: const Color.fromRGBO(215, 162, 101, 1),
-        duration: const Duration(seconds: 2),
-      ),
-    );
   }
 
   // Refresh connection status
@@ -134,30 +124,7 @@ class _DeviceListState extends State<DeviceList> {
     });
   }
 
-  Widget _buildConnectionIndicator(String label, bool? isReachable) {
-    if (isReachable == null) return const SizedBox.shrink();
 
-    return Row(
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: isReachable ? Colors.green : Colors.red,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: GoogleFonts.dmSans(
-            color: Colors.white70,
-            fontSize: 13,
-          ),
-        ),
-      ],
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -167,12 +134,6 @@ class _DeviceListState extends State<DeviceList> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: const Color.fromRGBO(28, 49, 50, 1),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Color.fromRGBO(215, 162, 101, 1)),
-            onPressed: _refreshStatus,
-          ),
-        ],
       ),
       backgroundColor: const Color.fromRGBO(28, 49, 50, 1),
       body: Padding(
@@ -267,96 +228,13 @@ class _DeviceListState extends State<DeviceList> {
                   ),
                 ),
               ),
-
-              const SizedBox(height: 5),
-
-              // Connection Status Card
-              if (connectionStatus != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
-                  child: Container(
-                    padding: const EdgeInsets.all(15),
-                    decoration: BoxDecoration(
-                      //color: const Color.fromRGBO(36, 68, 67, 1),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Connection Status',
-                          style: GoogleFonts.dmSans(
-                            color: const Color.fromRGBO(215, 162, 101, 1),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        _buildConnectionIndicator(
-                          'Cloud Server',
-                          connectionStatus!['cloudReachable'],
-                        ),
-                        const SizedBox(height: 5),
-                        _buildConnectionIndicator(
-                          'Local Hub',
-                          connectionStatus!['localReachable'],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              const SizedBox(height: 10),
-
-              // Auto-Switch Toggle
-              Padding(
-                padding: const EdgeInsets.all(5.0),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                  decoration: BoxDecoration(
-                    //color: const Color.fromRGBO(36, 68, 67, 1),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.sync,
-                        color: Color.fromRGBO(215, 162, 101, 1),
-                        size: 35,
-                      ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: Text(
-                          "Auto-Switch Hub",
-                          style: GoogleFonts.dmSans(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                      Switch(
-                        value: autoSwitch,
-                        onChanged: _toggleAutoSwitch,
-                        activeColor: const Color.fromRGBO(215, 162, 101, 1),
-                        activeTrackColor: const Color.fromRGBO(215, 162, 101, 0.5),
-                        inactiveThumbColor: Colors.grey,
-                        inactiveTrackColor: Colors.grey.shade700,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // Hub Switch Toggle
+              const SizedBox(height: 20),
+              // Manual Hub Override Toggle
               Padding(
                 padding: const EdgeInsets.all(5.0),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
                   decoration: BoxDecoration(
-                    //color: const Color.fromRGBO(36, 68, 67, 1),
                     borderRadius: BorderRadius.circular(15),
                   ),
                   child: Row(
@@ -380,7 +258,7 @@ class _DeviceListState extends State<DeviceList> {
                               ),
                             ),
                             Text(
-                              useDecogHub ? 'Local Server' : 'Cloud Server',
+                              "Only for Local GSK Setups",
                               style: GoogleFonts.dmSans(
                                 color: Colors.white70,
                                 fontSize: 12,

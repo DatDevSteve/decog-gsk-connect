@@ -9,13 +9,14 @@ class SupabaseConfig {
   static const String cloudAnonKey = 'sb_publishable_cNRFJ6aCyp7Ry5dqoj8vkg_KN8B-L79';
 
   // Raspberry Pi (Local Hub) credentials via Tailscale
-  // Replace with your actual Raspberry Pi Tailscale IP and credentials
-  static const String localUrl = 'http://100.111.59.127:8000';  // Your Tailscale IP
+  static const String localUrl = 'http://100.111.59.127:8000';
   static const String localAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY2MDgyNjAwLCJleHAiOjE5MjM4NDkwMDB9.yb7AUzinWDW754uzbUmWDJyJ_H2ZAg_dXeDFiCwxUVQ';
 
-  // Preference keys
+  // Preference key
   static const String _prefKey = 'use_decog_hub';
-  static const String _autoSwitchKey = 'auto_switch_hub';
+
+  // Callback for auto-switch notifications
+  static void Function(String serverType)? onAutoSwitch;
 
   // Get current hub preference
   static Future<bool> isUsingLocalHub() async {
@@ -27,18 +28,6 @@ class SupabaseConfig {
   static Future<void> setUseLocalHub(bool useLocal) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_prefKey, useLocal);
-  }
-
-  // Get auto-switch preference
-  static Future<bool> getAutoSwitch() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_autoSwitchKey) ?? true; // Default to true
-  }
-
-  // Save auto-switch preference
-  static Future<void> setAutoSwitch(bool autoSwitch) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_autoSwitchKey, autoSwitch);
   }
 
   // Get current credentials based on preference
@@ -65,43 +54,46 @@ class SupabaseConfig {
     }
   }
 
-  // Initialize or reinitialize Supabase
+  // Initialize or reinitialize Supabase with auto-switch ALWAYS enabled
   static Future<void> initializeSupabase({bool forceReinit = false}) async {
     try {
       bool useLocal = await isUsingLocalHub();
-      final autoSwitch = await getAutoSwitch();
+      bool switched = false;
+      String switchedTo = '';
 
-      // Auto-switch logic if enabled
-      if (autoSwitch) {
-        debugPrint('🔄 Auto-switch enabled, checking connectivity...');
+      // Auto-switch logic (ALWAYS enabled)
+      debugPrint('🔄 Auto-switch checking connectivity...');
 
-        if (!useLocal) {
-          // Try cloud first
-          final cloudReachable = await canReachHost('mrqxzkaowylemjpqasdw.supabase.co', 443);
-          if (!cloudReachable) {
-            debugPrint('⚠️ Cloud unreachable, checking local hub...');
-            final localReachable = await canReachHost('100.111.59.127', 8000);
-            if (localReachable) {
-              debugPrint('✅ Local hub reachable, auto-switching...');
-              useLocal = true;
-              await setUseLocalHub(true);
-            } else {
-              debugPrint('⚠️ Both cloud and local unreachable');
-            }
-          }
-        } else {
-          // Try local first
+      if (!useLocal) {
+        // Try cloud first
+        final cloudReachable = await canReachHost('mrqxzkaowylemjpqasdw.supabase.co', 443);
+        if (!cloudReachable) {
+          debugPrint('⚠️ Cloud unreachable, checking local hub...');
           final localReachable = await canReachHost('100.111.59.127', 8000);
-          if (!localReachable) {
-            debugPrint('⚠️ Local hub unreachable, checking cloud...');
-            final cloudReachable = await canReachHost('mrqxzkaowylemjpqasdw.supabase.co', 443);
-            if (cloudReachable) {
-              debugPrint('✅ Cloud reachable, auto-switching...');
-              useLocal = false;
-              await setUseLocalHub(false);
-            } else {
-              debugPrint('⚠️ Both local and cloud unreachable');
-            }
+          if (localReachable) {
+            debugPrint('✅ Local hub reachable, auto-switching...');
+            useLocal = true;
+            switched = true;
+            switchedTo = 'Local Hub';
+            await setUseLocalHub(true);
+          } else {
+            debugPrint('⚠️ Both cloud and local unreachable');
+          }
+        }
+      } else {
+        // Try local first
+        final localReachable = await canReachHost('100.111.59.127', 8000);
+        if (!localReachable) {
+          debugPrint('⚠️ Local hub unreachable, checking cloud...');
+          final cloudReachable = await canReachHost('mrqxzkaowylemjpqasdw.supabase.co', 443);
+          if (cloudReachable) {
+            debugPrint('✅ Cloud reachable, auto-switching...');
+            useLocal = false;
+            switched = true;
+            switchedTo = 'Cloud Server';
+            await setUseLocalHub(false);
+          } else {
+            debugPrint('⚠️ Both local and cloud unreachable');
           }
         }
       }
@@ -124,6 +116,11 @@ class SupabaseConfig {
       debugPrint('✅ Supabase initialized successfully');
       debugPrint('📡 Using ${useLocal ? "Local Hub (Raspberry Pi)" : "Cloud Server"}');
       debugPrint('🌐 URL: ${credentials['url']}');
+
+      // Notify if auto-switched
+      if (switched && onAutoSwitch != null) {
+        onAutoSwitch!(switchedTo);
+      }
 
       // Test connection
       await _testConnection(useLocal);
@@ -167,9 +164,9 @@ class SupabaseConfig {
     }
   }
 
-  // Switch between hub and cloud
+  // Switch between hub and cloud manually
   static Future<void> switchHub(bool useLocal) async {
-    debugPrint('🔄 Switching to ${useLocal ? "Local Hub" : "Cloud Server"}...');
+    debugPrint('🔄 Manually switching to ${useLocal ? "Local Hub" : "Cloud Server"}...');
     await setUseLocalHub(useLocal);
     await initializeSupabase(forceReinit: true);
   }
