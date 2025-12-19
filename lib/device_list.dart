@@ -1,3 +1,4 @@
+import 'package:decog_gsk/config/supabase_config.dart';  // ADD THIS
 import 'package:decog_gsk/status_monitor.dart';
 import 'package:decog_gsk/switcher_loading.dart';
 import 'package:flutter/material.dart';
@@ -12,12 +13,79 @@ class DeviceList extends StatefulWidget {
 
 class _DeviceListState extends State<DeviceList> {
   bool showButton = false;
-  Color clickBorder = Color.fromRGBO(36, 68, 67, 1);
+  bool useDecogHub = false;  // ADD THIS
+  bool isLoading = true;     // ADD THIS
+  Color clickBorder = const Color.fromRGBO(36, 68, 67, 1);
 
   @override
   void initState() {
     super.initState();
-    StatusMonitor.stopMonitoring();  // Stop monitoring on device list
+    StatusMonitor.stopMonitoring();
+    _loadHubPreference();  // ADD THIS
+  }
+
+  // Load saved hub preference
+  Future<void> _loadHubPreference() async {
+    final isLocal = await SupabaseConfig.isUsingLocalHub();
+    setState(() {
+      useDecogHub = isLocal;
+      isLoading = false;
+    });
+  }
+
+  // Toggle hub preference
+  Future<void> _toggleHub(bool value) async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      await SupabaseConfig.switchHub(value);
+
+      if (mounted) {
+        setState(() {
+          useDecogHub = value;
+          isLoading = false;
+        });
+
+        // Show confirmation
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              value
+                  ? '✓ Switched to Decog Hub (Local Server)'
+                  : '✓ Switched to Cloud Server',
+              style: GoogleFonts.dmSans(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            backgroundColor: const Color.fromRGBO(215, 162, 101, 1),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '✗ Failed to switch: $e',
+              style: GoogleFonts.dmSans(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -25,14 +93,12 @@ class _DeviceListState extends State<DeviceList> {
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
 
-
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: Color.fromRGBO(28, 49, 50, 1),
-
+        backgroundColor: const Color.fromRGBO(28, 49, 50, 1),
       ),
-      backgroundColor: Color.fromRGBO(28, 49, 50, 1),
+      backgroundColor: const Color.fromRGBO(28, 49, 50, 1),
       body: Padding(
         padding: const EdgeInsets.all(10.0),
         child: Padding(
@@ -45,7 +111,7 @@ class _DeviceListState extends State<DeviceList> {
               Text(
                 "D E V I C E S",
                 style: GoogleFonts.dmSans(
-                  color: Color.fromRGBO(215, 162, 101, 1),
+                  color: const Color.fromRGBO(215, 162, 101, 1),
                   fontSize: 40,
                   fontWeight: FontWeight.bold,
                 ),
@@ -59,17 +125,19 @@ class _DeviceListState extends State<DeviceList> {
                 ),
               ),
               SizedBox(height: screenHeight * 0.15),
+
+              // Device Card
               Center(
                 child: InkWell(
                   radius: 100,
                   borderRadius: BorderRadius.circular(20),
-                  splashColor: Color.fromRGBO(215, 162, 101, 1),
+                  splashColor: const Color.fromRGBO(215, 162, 101, 1),
                   onTap: () {
                     setState(() {
                       showButton = !showButton;
-                      clickBorder = clickBorder == Color.fromRGBO(36, 68, 67, 1)
-                          ? Color.fromRGBO(215, 162, 101, 1)
-                          : Color.fromRGBO(36, 68, 67, 1);
+                      clickBorder = clickBorder == const Color.fromRGBO(36, 68, 67, 1)
+                          ? const Color.fromRGBO(215, 162, 101, 1)
+                          : const Color.fromRGBO(36, 68, 67, 1);
                     });
                   },
                   child: Card(
@@ -78,14 +146,14 @@ class _DeviceListState extends State<DeviceList> {
                       side: BorderSide(color: clickBorder, width: 3),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    color: Color.fromRGBO(36, 68, 67, 1),
+                    color: const Color.fromRGBO(36, 68, 67, 1),
                     child: SizedBox(
                       height: 90,
                       width: double.infinity,
                       child: Row(
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.all(10.0),
+                          const Padding(
+                            padding: EdgeInsets.all(10.0),
                             child: Icon(
                               Icons.memory,
                               size: 50,
@@ -123,6 +191,58 @@ class _DeviceListState extends State<DeviceList> {
                   ),
                 ),
               ),
+
+              const SizedBox(height: 30),
+
+              // DECOG HUB SWITCH - NEW ADDITION
+              Padding(
+                padding: const EdgeInsets.all(5.0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+                  decoration: BoxDecoration(
+                    color: const Color.fromRGBO(36, 68, 67, 1),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.hub,
+                        color: Color.fromRGBO(215, 162, 101, 1),
+                        size: 28,
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: Text(
+                          "Use Decog Hub",
+                          style: GoogleFonts.dmSans(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      if (isLoading)
+                        const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color.fromRGBO(215, 162, 101, 1),
+                          ),
+                        )
+                      else
+                        Switch(
+                          value: useDecogHub,
+                          onChanged: _toggleHub,
+                          activeColor: const Color.fromRGBO(215, 162, 101, 1),
+                          activeTrackColor: const Color.fromRGBO(215, 162, 101, 0.5),
+                          inactiveThumbColor: Colors.grey,
+                          inactiveTrackColor: Colors.grey.shade700,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -133,7 +253,7 @@ class _DeviceListState extends State<DeviceList> {
           Navigator.of(context).push(
             PageRouteBuilder(
               pageBuilder: (context, animation, secondaryAnimation) =>
-                  LoadingSwitch(),
+              const LoadingSwitch(),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
                 const begin = Offset(1.0, 0.0);
@@ -148,12 +268,12 @@ class _DeviceListState extends State<DeviceList> {
                   child: child,
                 );
               },
-              transitionDuration: Duration(milliseconds: 500),
+              transitionDuration: const Duration(milliseconds: 500),
             ),
           );
         },
-        backgroundColor: Color.fromRGBO(215, 162, 101, 1),
-        child: Icon(
+        backgroundColor: const Color.fromRGBO(215, 162, 101, 1),
+        child: const Icon(
           Icons.arrow_forward,
           color: Color.fromRGBO(28, 49, 50, 1),
           size: 30,

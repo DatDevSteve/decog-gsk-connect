@@ -1,7 +1,8 @@
 import 'package:decog_gsk/device_list.dart';
 import 'package:decog_gsk/status_monitor.dart';
+import 'package:decog_gsk/config/supabase_config.dart';  // ADD THIS
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';  // ADD THIS IMPORT
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() async {
@@ -13,15 +14,8 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  try {
-    await Supabase.initialize(
-      url: 'https://mrqxzkaowylemjpqasdw.supabase.co',
-      anonKey: 'sb_publishable_cNRFJ6aCyp7Ry5dqoj8vkg_KN8B-L79',
-    );
-    debugPrint('✓ Supabase initialized successfully');
-  } catch (e) {
-    debugPrint('✗ Supabase initialization error: $e');
-  }
+  // Initialize Supabase with saved preference
+  await SupabaseConfig.initializeSupabase();
 
   runApp(const MainApp());
 }
