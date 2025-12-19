@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:decog_gsk/dashboard_modules/sensor_disconnected.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,7 +12,7 @@ class StatusMonitor {
   static String? _currentScreen;
   static final supabase = Supabase.instance.client;
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-  static bool _isFirstCheck = true;  // ADD THIS FLAG
+  static bool _isFirstCheck = true;
 
   // Start monitoring
   static void startMonitoring() {
@@ -33,20 +34,49 @@ class StatusMonitor {
     _statusTimer?.cancel();
     _statusTimer = null;
     _currentScreen = null;
-    _isFirstCheck = true;  // Reset flag when stopping
+    _isFirstCheck = true;
   }
 
   // Check status and navigate if needed
   static Future<void> _checkAndNavigate() async {
     try {
+      // Query without .single() to handle empty results
       final response = await supabase
           .from('sensor_live')
           .select('timestamp, status, sensor_online')
           .order('timestamp', ascending: false)
           .limit(1)
-          .single();
+          .timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          throw TimeoutException('Database query timeout');
+        },
+      );
 
-      final String timestampStr = response['timestamp'] as String;
+      // Handle empty table
+      if (response.isEmpty) {
+        debugPrint('⚠️ No data in sensor_live table - showing disconnected state');
+        String targetScreen = 'sensor_disconnected';
+
+        if (_currentScreen != targetScreen) {
+          if (_isFirstCheck) {
+            debugPrint('📍 Initial screen set to: $targetScreen (no data available)');
+            _currentScreen = targetScreen;
+            _isFirstCheck = false;
+          } else {
+            debugPrint('🔄 Status changed: $_currentScreen -> $targetScreen (no data)');
+            _currentScreen = targetScreen;
+            _navigateToScreen(targetScreen);
+          }
+        } else if (_isFirstCheck) {
+          _isFirstCheck = false;
+        }
+        return;
+      }
+
+      // Get the first (most recent) record
+      final data = response.first;
+      final String timestampStr = data['timestamp'] as String;
 
       // Parse as UTC timestamp (Supabase stores in UTC)
       final DateTime lastUpdateUTC = DateTime.parse(timestampStr).toUtc();
@@ -54,9 +84,9 @@ class StatusMonitor {
       // Get current time in UTC for accurate comparison
       final DateTime nowUTC = DateTime.now().toUtc();
 
-      final bool sensorOnline = response['sensor_online'];
+      final bool sensorOnline = data['sensor_online'] ?? false;
 
-      final String status = (response['status'] as String).toUpperCase();
+      final String status = (data['status'] as String? ?? 'NORMAL').toUpperCase();
 
       // Calculate the difference in seconds
       final int secondsSinceLastUpdate = nowUTC.difference(lastUpdateUTC).inSeconds;
@@ -81,8 +111,6 @@ class StatusMonitor {
         targetScreen = 'connected';
       }
 
-
-
       // Only navigate if we need to switch screens
       if (_currentScreen != targetScreen) {
         // Skip navigation on first check (we're already on correct screen from LoadingSwitch)
@@ -104,10 +132,34 @@ class StatusMonitor {
         if (_isFirstCheck) {
           _isFirstCheck = false;
         }
-        debugPrint('✓ Status unchanged: $targetScreen (${secondsSinceLastUpdate}s ago, status: $status)');
+        debugPrint('✅ Status unchanged: $targetScreen (${secondsSinceLastUpdate}s ago, status: $status)');
       }
+    } on SocketException catch (e) {
+      debugPrint('❌ Network error: $e');
+      _handleError('disconnected', 'Network connection failed');
+    } on TimeoutException catch (e) {
+      debugPrint('❌ Timeout error: $e');
+      _handleError('disconnected', 'Request timeout');
     } catch (error) {
       debugPrint('❌ Status check error: $error');
+      _handleError('disconnected', error.toString());
+    }
+  }
+
+  // Handle errors consistently
+  static void _handleError(String targetScreen, String reason) {
+    if (_currentScreen != targetScreen) {
+      if (_isFirstCheck) {
+        debugPrint('📍 Error occurred - showing: $targetScreen ($reason)');
+        _currentScreen = targetScreen;
+        _isFirstCheck = false;
+      } else {
+        debugPrint('🔄 Error - switching to: $targetScreen ($reason)');
+        _currentScreen = targetScreen;
+        _navigateToScreen(targetScreen);
+      }
+    } else if (_isFirstCheck) {
+      _isFirstCheck = false;
     }
   }
 

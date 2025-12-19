@@ -1,4 +1,4 @@
-import 'package:decog_gsk/config/supabase_config.dart';  // ADD THIS
+import 'package:decog_gsk/config/supabase_config.dart';
 import 'package:decog_gsk/status_monitor.dart';
 import 'package:decog_gsk/switcher_loading.dart';
 import 'package:flutter/material.dart';
@@ -13,22 +13,29 @@ class DeviceList extends StatefulWidget {
 
 class _DeviceListState extends State<DeviceList> {
   bool showButton = false;
-  bool useDecogHub = false;  // ADD THIS
-  bool isLoading = true;     // ADD THIS
+  bool useDecogHub = false;
+  bool autoSwitch = true;
+  bool isLoading = true;
   Color clickBorder = const Color.fromRGBO(36, 68, 67, 1);
+  Map<String, dynamic>? connectionStatus;
 
   @override
   void initState() {
     super.initState();
     StatusMonitor.stopMonitoring();
-    _loadHubPreference();  // ADD THIS
+    _loadPreferences();
   }
 
-  // Load saved hub preference
-  Future<void> _loadHubPreference() async {
+  // Load saved preferences and check connection
+  Future<void> _loadPreferences() async {
     final isLocal = await SupabaseConfig.isUsingLocalHub();
+    final autoSwitchEnabled = await SupabaseConfig.getAutoSwitch();
+    final status = await SupabaseConfig.getConnectionStatus();
+
     setState(() {
       useDecogHub = isLocal;
+      autoSwitch = autoSwitchEnabled;
+      connectionStatus = status;
       isLoading = false;
     });
   }
@@ -41,14 +48,15 @@ class _DeviceListState extends State<DeviceList> {
 
     try {
       await SupabaseConfig.switchHub(value);
+      final status = await SupabaseConfig.getConnectionStatus();
 
       if (mounted) {
         setState(() {
           useDecogHub = value;
+          connectionStatus = status;
           isLoading = false;
         });
 
-        // Show confirmation
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -88,15 +96,83 @@ class _DeviceListState extends State<DeviceList> {
     }
   }
 
+  // Toggle auto-switch preference
+  Future<void> _toggleAutoSwitch(bool value) async {
+    await SupabaseConfig.setAutoSwitch(value);
+    setState(() {
+      autoSwitch = value;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          value
+              ? '✓ Auto-switch enabled'
+              : '✓ Auto-switch disabled',
+          style: GoogleFonts.dmSans(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: const Color.fromRGBO(215, 162, 101, 1),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // Refresh connection status
+  Future<void> _refreshStatus() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    final status = await SupabaseConfig.getConnectionStatus();
+
+    setState(() {
+      connectionStatus = status;
+      isLoading = false;
+    });
+  }
+
+  Widget _buildConnectionIndicator(String label, bool? isReachable) {
+    if (isReachable == null) return const SizedBox.shrink();
+
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: isReachable ? Colors.green : Colors.red,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: GoogleFonts.dmSans(
+            color: Colors.white70,
+            fontSize: 13,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: const Color.fromRGBO(28, 49, 50, 1),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Color.fromRGBO(215, 162, 101, 1)),
+            onPressed: _refreshStatus,
+          ),
+        ],
       ),
       backgroundColor: const Color.fromRGBO(28, 49, 50, 1),
       body: Padding(
@@ -124,7 +200,7 @@ class _DeviceListState extends State<DeviceList> {
                   fontSize: 16,
                 ),
               ),
-              SizedBox(height: screenHeight * 0.15),
+              SizedBox(height: screenHeight * 0.1),
 
               // Device Card
               Center(
@@ -192,15 +268,95 @@ class _DeviceListState extends State<DeviceList> {
                 ),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 5),
 
-              // DECOG HUB SWITCH - NEW ADDITION
+              // Connection Status Card
+              if (connectionStatus != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
+                  child: Container(
+                    padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      //color: const Color.fromRGBO(36, 68, 67, 1),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Connection Status',
+                          style: GoogleFonts.dmSans(
+                            color: const Color.fromRGBO(215, 162, 101, 1),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _buildConnectionIndicator(
+                          'Cloud Server',
+                          connectionStatus!['cloudReachable'],
+                        ),
+                        const SizedBox(height: 5),
+                        _buildConnectionIndicator(
+                          'Local Hub',
+                          connectionStatus!['localReachable'],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              const SizedBox(height: 10),
+
+              // Auto-Switch Toggle
+              Padding(
+                padding: const EdgeInsets.all(5.0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                  decoration: BoxDecoration(
+                    //color: const Color.fromRGBO(36, 68, 67, 1),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.sync,
+                        color: Color.fromRGBO(215, 162, 101, 1),
+                        size: 35,
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: Text(
+                          "Auto-Switch Hub",
+                          style: GoogleFonts.dmSans(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      Switch(
+                        value: autoSwitch,
+                        onChanged: _toggleAutoSwitch,
+                        activeColor: const Color.fromRGBO(215, 162, 101, 1),
+                        activeTrackColor: const Color.fromRGBO(215, 162, 101, 0.5),
+                        inactiveThumbColor: Colors.grey,
+                        inactiveTrackColor: Colors.grey.shade700,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // Hub Switch Toggle
               Padding(
                 padding: const EdgeInsets.all(5.0),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
                   decoration: BoxDecoration(
-                    color: const Color.fromRGBO(36, 68, 67, 1),
+                    //color: const Color.fromRGBO(36, 68, 67, 1),
                     borderRadius: BorderRadius.circular(15),
                   ),
                   child: Row(
@@ -212,13 +368,25 @@ class _DeviceListState extends State<DeviceList> {
                       ),
                       const SizedBox(width: 15),
                       Expanded(
-                        child: Text(
-                          "Use Decog Hub",
-                          style: GoogleFonts.dmSans(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Use Decog Hub",
+                              style: GoogleFonts.dmSans(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              useDecogHub ? 'Local Server' : 'Cloud Server',
+                              style: GoogleFonts.dmSans(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       if (isLoading)
