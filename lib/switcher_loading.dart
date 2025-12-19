@@ -17,6 +17,9 @@ class LoadingSwitch extends StatefulWidget {
 class _LoadingSwitchState extends State<LoadingSwitch> {
   final supabase = Supabase.instance.client;
 
+  // Timeout threshold in seconds (must match status_monitor.dart)
+  static const int timeoutThreshold = 10;
+
   @override
   void initState() {
     super.initState();
@@ -64,31 +67,34 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
       // Calculate the difference in seconds
       final int secondsSinceLastUpdate = nowUTC.difference(lastUpdateUTC).inSeconds;
 
-      debugPrint('Last update was $secondsSinceLastUpdate seconds ago');
-      debugPrint('Last timestamp (UTC): $lastUpdateUTC');
-      debugPrint('Current time (UTC): $nowUTC');
-      debugPrint('Sensor online: $sensorOnline');
-      debugPrint('Status: $status');
+      debugPrint('📊 Initial status check:');
+      debugPrint('   Last update: $secondsSinceLastUpdate seconds ago');
+      debugPrint('   Last timestamp (UTC): $lastUpdateUTC');
+      debugPrint('   Current time (UTC): $nowUTC');
+      debugPrint('   Timeout threshold: ${timeoutThreshold}s');
+      debugPrint('   Sensor online flag: $sensorOnline');
+      debugPrint('   Status: $status');
 
-      final bool isOnline = secondsSinceLastUpdate <= 20;
+      final bool isOnline = secondsSinceLastUpdate <= timeoutThreshold;
 
       if (!isOnline) {
+        // Data is older than 30 seconds
         if (!sensorOnline) {
-          debugPrint('Navigating to: SensorDisconnected (sensor offline)');
+          debugPrint('➡️ Navigating to: SensorDisconnected (sensor offline + stale data)');
           _navigateToSensorDisconnected();
         } else {
-          debugPrint('Navigating to: DisconnectedDev (base station offline)');
+          debugPrint('➡️ Navigating to: DisconnectedDev (base station offline - ${secondsSinceLastUpdate}s ago)');
           _navigateToDisconnected();
         }
       } else if (status == 'HIGH') {
-        debugPrint('Navigating to: LeakScreen (HIGH status)');
+        debugPrint('➡️ Navigating to: LeakScreen (HIGH status detected)');
         _navigateToLeak();
       } else {
-        debugPrint('Navigating to: DashboardScreen (NORMAL/LOW status)');
+        debugPrint('➡️ Navigating to: DashboardScreen (NORMAL/LOW status, online)');
         _navigateToDashboard();
       }
     } on SocketException catch (error) {
-      debugPrint('Network error checking device status: $error');
+      debugPrint('❌ Network error checking device status: $error');
 
       if (!mounted) return;
 
@@ -102,7 +108,7 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
 
       _navigateToSensorDisconnected();
     } on TimeoutException catch (error) {
-      debugPrint('Timeout error checking device status: $error');
+      debugPrint('❌ Timeout error checking device status: $error');
 
       if (!mounted) return;
 
@@ -116,7 +122,7 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
 
       _navigateToSensorDisconnected();
     } catch (error) {
-      debugPrint('Error checking device status: $error');
+      debugPrint('❌ Error checking device status: $error');
 
       if (!mounted) return;
 

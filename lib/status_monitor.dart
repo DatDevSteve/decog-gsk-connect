@@ -14,6 +14,9 @@ class StatusMonitor {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   static bool _isFirstCheck = true;
 
+  // Timeout threshold in seconds
+  static const int timeoutThreshold = 10;
+
   // Start monitoring
   static void startMonitoring() {
     debugPrint('📡 Status monitoring started');
@@ -55,7 +58,7 @@ class StatusMonitor {
 
       // Handle empty table
       if (response.isEmpty) {
-        debugPrint('⚠️ No data in sensor_live table - showing disconnected state');
+        debugPrint('⚠️ No data in sensor_live table - showing sensor disconnected state');
         String targetScreen = 'sensor_disconnected';
 
         if (_currentScreen != targetScreen) {
@@ -90,7 +93,7 @@ class StatusMonitor {
 
       // Calculate the difference in seconds
       final int secondsSinceLastUpdate = nowUTC.difference(lastUpdateUTC).inSeconds;
-      final bool isOnline = secondsSinceLastUpdate <= 20;
+      final bool isOnline = secondsSinceLastUpdate <= timeoutThreshold;
 
       // Convert to local time for display purposes
       final DateTime lastUpdateLocal = lastUpdateUTC.toLocal();
@@ -100,10 +103,13 @@ class StatusMonitor {
 
       // Determine which screen should be showing
       if (!isOnline) {
+        // Data is older than 30 seconds - device is offline
         if (!sensorOnline) {
           targetScreen = "sensor_disconnected";
+          debugPrint('⚠️ Sensor marked offline and data is stale');
         } else {
           targetScreen = 'disconnected';
+          debugPrint('⚠️ Base station offline - last update ${secondsSinceLastUpdate}s ago');
         }
       } else if (status == 'HIGH') {
         targetScreen = 'leak';
@@ -122,7 +128,8 @@ class StatusMonitor {
           debugPrint('🔄 Status changed: $_currentScreen -> $targetScreen');
           debugPrint('   Last update: $lastUpdateLocal (Local) / $lastUpdateUTC (UTC)');
           debugPrint('   Current time: $nowLocal (Local) / $nowUTC (UTC)');
-          debugPrint('   Time diff: ${secondsSinceLastUpdate}s ago');
+          debugPrint('   Time diff: ${secondsSinceLastUpdate}s ago (threshold: ${timeoutThreshold}s)');
+          debugPrint('   Sensor online flag: $sensorOnline');
           debugPrint('   Status: $status');
           _currentScreen = targetScreen;
           _navigateToScreen(targetScreen);
@@ -132,17 +139,17 @@ class StatusMonitor {
         if (_isFirstCheck) {
           _isFirstCheck = false;
         }
-        debugPrint('✅ Status unchanged: $targetScreen (${secondsSinceLastUpdate}s ago, status: $status)');
+        debugPrint('✅ Status unchanged: $targetScreen (${secondsSinceLastUpdate}s ago, status: $status, sensor_online: $sensorOnline)');
       }
     } on SocketException catch (e) {
       debugPrint('❌ Network error: $e');
-      _handleError('disconnected', 'Network connection failed');
+      _handleError('sensor_disconnected', 'Network connection failed');
     } on TimeoutException catch (e) {
       debugPrint('❌ Timeout error: $e');
-      _handleError('disconnected', 'Request timeout');
+      _handleError('sensor_disconnected', 'Request timeout');
     } catch (error) {
       debugPrint('❌ Status check error: $error');
-      _handleError('disconnected', error.toString());
+      _handleError('sensor_disconnected', error.toString());
     }
   }
 
