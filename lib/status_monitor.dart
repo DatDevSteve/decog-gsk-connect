@@ -15,7 +15,7 @@ class StatusMonitor {
   static bool _isFirstCheck = true;
 
   // Timeout threshold in seconds
-  static const int timeoutThreshold = 10;
+  static const int timeoutThreshold = 15;
 
   // Start monitoring
   static void startMonitoring() {
