@@ -43,7 +43,6 @@ class StatusMonitor {
   // Check status and navigate if needed
   static Future<void> _checkAndNavigate() async {
     try {
-      // Query without .single() to handle empty results
       final response = await supabase
           .from('sensor_live')
           .select('timestamp, status, sensor_online')
@@ -56,10 +55,9 @@ class StatusMonitor {
         },
       );
 
-      // Handle empty table
       if (response.isEmpty) {
-        debugPrint('⚠️ No data in sensor_live table - showing sensor disconnected state');
-        String targetScreen = 'sensor_disconnected';
+        debugPrint('⚠️ No data in sensor_live table - showing base station disconnected');
+        String targetScreen = 'disconnected';
 
         if (_currentScreen != targetScreen) {
           if (_isFirstCheck) {
@@ -77,49 +75,41 @@ class StatusMonitor {
         return;
       }
 
-      // Get the first (most recent) record
       final data = response.first;
       final String timestampStr = data['timestamp'] as String;
-
-      // Parse as UTC timestamp (Supabase stores in UTC)
       final DateTime lastUpdateUTC = DateTime.parse(timestampStr).toUtc();
-
-      // Get current time in UTC for accurate comparison
       final DateTime nowUTC = DateTime.now().toUtc();
 
       final bool sensorOnline = data['sensor_online'] ?? false;
-
       final String status = (data['status'] as String? ?? 'NORMAL').toUpperCase();
 
-      // Calculate the difference in seconds
       final int secondsSinceLastUpdate = nowUTC.difference(lastUpdateUTC).inSeconds;
-      final bool isOnline = secondsSinceLastUpdate <= timeoutThreshold;
+      final bool baseStationOnline = secondsSinceLastUpdate <= timeoutThreshold;
 
-      // Convert to local time for display purposes
       final DateTime lastUpdateLocal = lastUpdateUTC.toLocal();
       final DateTime nowLocal = nowUTC.toLocal();
 
       String targetScreen;
 
-      // Determine which screen should be showing
-      if (!isOnline) {
-        // Data is older than 30 seconds - device is offline
-        if (!sensorOnline) {
-          targetScreen = "sensor_disconnected";
-          debugPrint('⚠️ Sensor marked offline and data is stale');
-        } else {
-          targetScreen = 'disconnected';
-          debugPrint('⚠️ Base station offline - last update ${secondsSinceLastUpdate}s ago');
-        }
+      // *** FIXED LOGIC ***
+      if (!baseStationOnline) {
+        // Base station is offline (data too old)
+        targetScreen = 'disconnected';
+        debugPrint('⚠️ Base station offline - last update ${secondsSinceLastUpdate}s ago');
+      } else if (!sensorOnline) {
+        // Base station online BUT sensor board is offline
+        targetScreen = "sensor_disconnected";
+        debugPrint('⚠️ Sensor board offline, base station online');
       } else if (status == 'HIGH') {
+        // Everything online but leak detected
         targetScreen = 'leak';
       } else {
+        // Everything online and normal
         targetScreen = 'connected';
       }
 
       // Only navigate if we need to switch screens
       if (_currentScreen != targetScreen) {
-        // Skip navigation on first check (we're already on correct screen from LoadingSwitch)
         if (_isFirstCheck) {
           debugPrint('📍 Initial screen set to: $targetScreen (skipping navigation)');
           _currentScreen = targetScreen;
@@ -135,7 +125,6 @@ class StatusMonitor {
           _navigateToScreen(targetScreen);
         }
       } else {
-        // After first check, disable the flag
         if (_isFirstCheck) {
           _isFirstCheck = false;
         }
@@ -143,13 +132,13 @@ class StatusMonitor {
       }
     } on SocketException catch (e) {
       debugPrint('❌ Network error: $e');
-      _handleError('sensor_disconnected', 'Network connection failed');
+      _handleError('disconnected', 'Network connection failed');
     } on TimeoutException catch (e) {
       debugPrint('❌ Timeout error: $e');
-      _handleError('sensor_disconnected', 'Request timeout');
+      _handleError('disconnected', 'Request timeout');
     } catch (error) {
       debugPrint('❌ Status check error: $error');
-      _handleError('sensor_disconnected', error.toString());
+      _handleError('disconnected', error.toString());
     }
   }
 
