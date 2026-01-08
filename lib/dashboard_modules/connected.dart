@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../status_monitor.dart';
+import '../config/supabase_config.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -69,6 +70,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  void _showPowerControlDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => const PowerControlDialog(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -99,18 +107,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     DeviceList(),
                 transitionsBuilder:
                     (context, animation, secondaryAnimation, child) {
-                      const begin = Offset(1.0, 0.0);
-                      const end = Offset.zero;
-                      const curve = Curves.ease;
-                      var tween = Tween(
-                        begin: begin,
-                        end: end,
-                      ).chain(CurveTween(curve: curve));
-                      return SlideTransition(
-                        position: animation.drive(tween),
-                        child: child,
-                      );
-                    },
+                  const begin = Offset(1.0, 0.0);
+                  const end = Offset.zero;
+                  const curve = Curves.ease;
+                  var tween = Tween(
+                    begin: begin,
+                    end: end,
+                  ).chain(CurveTween(curve: curve));
+                  return SlideTransition(
+                    position: animation.drive(tween),
+                    child: child,
+                  );
+                },
                 transitionDuration: Duration(milliseconds: 500),
               ),
             );
@@ -259,21 +267,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         color: Colors.white,
                         size: 28,
                       ),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Work in Progress, Coming Soon!',
-                              style: GoogleFonts.dmSans(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            backgroundColor: Color.fromRGBO(215, 162, 101, 1),
-                            duration: const Duration(seconds: 3),
-                          ),
-                        );
-                      },
+                      onPressed: _showPowerControlDialog,
                     ),
                   ),
 
@@ -311,6 +305,335 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class PowerControlDialog extends StatefulWidget {
+  const PowerControlDialog({super.key});
+
+  @override
+  State<PowerControlDialog> createState() => _PowerControlDialogState();
+}
+
+class _PowerControlDialogState extends State<PowerControlDialog> {
+  bool _fanStatus = false;
+  bool _valveStatus = false;
+  bool _isLoadingStates = true;
+  bool _isUpdating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCurrentStates();
+  }
+
+  Future<void> _fetchCurrentStates() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final response = await supabase
+          .from('sensor_live')
+          .select('fan_status, valve_status')
+          .order('timestamp', ascending: false)
+          .limit(1)
+          .single();
+
+      if (mounted) {
+        setState(() {
+          _fanStatus = response['fan_status'] ?? false;
+          _valveStatus = response['valve_status'] ?? false;
+          _isLoadingStates = false;
+        });
+      }
+    } catch (error) {
+      debugPrint('Error fetching control states: $error');
+      if (mounted) {
+        setState(() {
+          _isLoadingStates = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _updateControlState(String field, bool value) async {
+    setState(() {
+      _isUpdating = true;
+    });
+
+    try {
+      // Update both local and cloud databases
+      final isUsingLocal = await SupabaseConfig.isUsingLocalHub();
+      
+      // Update current database (whichever is active)
+      await _updateDatabase(Supabase.instance.client, field, value);
+      
+      // Also update the other database for sync
+      try {
+        final otherClient = await _getOtherSupabaseClient(isUsingLocal);
+        if (otherClient != null) {
+          await _updateDatabase(otherClient, field, value);
+          debugPrint('✅ Updated both local and cloud databases');
+        }
+      } catch (e) {
+        debugPrint('⚠️ Could not sync to other database: $e');
+        // Continue even if other database fails
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${field == 'fan_status' ? 'Fan' : 'Valve'} ${value ? 'ON' : 'OFF'}',
+              style: GoogleFonts.dmSans(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            backgroundColor: const Color.fromRGBO(215, 162, 101, 1),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (error) {
+      debugPrint('❌ Error updating $field: $error');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to update ${field == 'fan_status' ? 'fan' : 'valve'}',
+              style: GoogleFonts.dmSans(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        
+        // Revert the switch state on error
+        setState(() {
+          if (field == 'fan_status') {
+            _fanStatus = !value;
+          } else {
+            _valveStatus = !value;
+          }
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdating = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _updateDatabase(SupabaseClient client, String field, bool value) async {
+    // Get the latest row ID to update
+    final latestRow = await client
+        .from('sensor_live')
+        .select('id')
+        .order('timestamp', ascending: false)
+        .limit(1)
+        .single();
+
+    final id = latestRow['id'];
+
+    // Update the specific field
+    await client
+        .from('sensor_live')
+        .update({field: value})
+        .eq('id', id);
+  }
+
+  Future<SupabaseClient?> _getOtherSupabaseClient(bool currentIsLocal) async {
+    try {
+      // Create a new client for the other database
+      final credentials = currentIsLocal
+          ? {
+              'url': SupabaseConfig.cloudUrl,
+              'anonKey': SupabaseConfig.cloudAnonKey,
+            }
+          : {
+              'url': SupabaseConfig.localUrl,
+              'anonKey': SupabaseConfig.localAnonKey,
+            };
+
+      return SupabaseClient(
+        credentials['url']!,
+        credentials['anonKey']!,
+      );
+    } catch (e) {
+      debugPrint('Error creating other Supabase client: $e');
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color.fromRGBO(28, 49, 50, 1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color.fromRGBO(215, 162, 101, 1),
+            width: 2,
+          ),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Title
+            Text(
+              'POWER CONTROL',
+              style: GoogleFonts.dmSans(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: const Color.fromRGBO(215, 162, 101, 1),
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(height: 30),
+
+            // Loading indicator or controls
+            if (_isLoadingStates)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: CircularProgressIndicator(
+                  color: Color.fromRGBO(215, 162, 101, 1),
+                ),
+              )
+            else ..[
+              // Fan Control
+              _buildControlRow(
+                icon: Icons.mode_fan_off_outlined,
+                label: 'EXHAUST FAN',
+                value: _fanStatus,
+                onChanged: _isUpdating
+                    ? null
+                    : (value) {
+                        setState(() {
+                          _fanStatus = value;
+                        });
+                        _updateControlState('fan_status', value);
+                      },
+              ),
+
+              const SizedBox(height: 24),
+
+              // Valve Control
+              _buildControlRow(
+                icon: Icons.water_drop_outlined,
+                label: 'GAS VALVE',
+                value: _valveStatus,
+                onChanged: _isUpdating
+                    ? null
+                    : (value) {
+                        setState(() {
+                          _valveStatus = value;
+                        });
+                        _updateControlState('valve_status', value);
+                      },
+              ),
+            ],
+
+            const SizedBox(height: 30),
+
+            // Close button
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                backgroundColor: const Color.fromRGBO(215, 162, 101, 1),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+              ),
+              child: Text(
+                'CLOSE',
+                style: GoogleFonts.dmSans(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: const Color.fromRGBO(28, 49, 50, 1),
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildControlRow({
+    required IconData icon,
+    required String label,
+    required bool value,
+    required ValueChanged<bool>? onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: const Color.fromRGBO(28, 49, 50, 1),
+        border: Border.all(
+          color: const Color.fromRGBO(215, 162, 101, 0.3),
+          width: 1.5,
+        ),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Row(
+        children: [
+          // Icon
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color.fromRGBO(215, 162, 101, 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              color: const Color.fromRGBO(215, 162, 101, 1),
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+
+          // Label
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.dmSans(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+
+          // Switch
+          Transform.scale(
+            scale: 0.9,
+            child: Switch(
+              value: value,
+              onChanged: onChanged,
+              activeColor: const Color.fromRGBO(215, 162, 101, 1),
+              activeTrackColor: const Color.fromRGBO(215, 162, 101, 0.5),
+              inactiveThumbColor: Colors.grey.shade400,
+              inactiveTrackColor: Colors.grey.shade700,
+            ),
+          ),
+        ],
       ),
     );
   }
