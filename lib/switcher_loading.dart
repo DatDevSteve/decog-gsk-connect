@@ -18,7 +18,7 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
   final supabase = Supabase.instance.client;
 
   // Timeout threshold in seconds (must match status_monitor.dart)
-  static const int timeoutThreshold = 10;
+  static const int timeoutThreshold = 15;
 
   @override
   void initState() {
