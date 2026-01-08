@@ -14,6 +14,7 @@ class StatusMonitor {
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
   static bool _isFirstCheck = true;
+  static bool _isChecking = false;
 
   // Timeout threshold in seconds
   static const int timeoutThreshold = 15;
@@ -42,10 +43,6 @@ class StatusMonitor {
   }
 
   // Check status and navigate if needed
-  // Add a flag to prevent concurrent checks
-  static bool _isChecking = false;
-
-// Update _checkAndNavigate method:
   static Future<void> _checkAndNavigate() async {
     // Prevent concurrent checks
     if (_isChecking) {
@@ -68,16 +65,94 @@ class StatusMonitor {
         },
       );
 
-      // ... rest of your existing code ...
+      if (response.isEmpty) {
+        debugPrint('⚠️ No data in sensor_live table - showing base station disconnected');
+        String targetScreen = 'disconnected';
 
+        if (_currentScreen != targetScreen) {
+          if (_isFirstCheck) {
+            debugPrint('📍 Initial screen set to: $targetScreen (no data available)');
+            _currentScreen = targetScreen;
+            _isFirstCheck = false;
+          } else {
+            debugPrint('🔄 Status changed: $_currentScreen -> $targetScreen (no data)');
+            _currentScreen = targetScreen;
+            _navigateToScreen(targetScreen);
+          }
+        } else if (_isFirstCheck) {
+          _isFirstCheck = false;
+        }
+        return;
+      }
+
+      final data = response.first;
+      final String timestampStr = data['timestamp'] as String;
+      final DateTime lastUpdateUTC = DateTime.parse(timestampStr).toUtc();
+      final DateTime nowUTC = DateTime.now().toUtc();
+
+      final bool sensorOnline = data['sensor_online'] ?? false;
+      final String status = (data['status'] as String? ?? 'NORMAL').toUpperCase();
+
+      final int secondsSinceLastUpdate = nowUTC.difference(lastUpdateUTC).inSeconds;
+      final bool baseStationOnline = secondsSinceLastUpdate <= timeoutThreshold;
+
+      final DateTime lastUpdateLocal = lastUpdateUTC.toLocal();
+      final DateTime nowLocal = nowUTC.toLocal();
+
+      String targetScreen;
+
+      // Determine which screen to show
+      if (!baseStationOnline) {
+        // Base station is offline (data too old)
+        targetScreen = 'disconnected';
+        debugPrint('⚠️ Base station offline - last update ${secondsSinceLastUpdate}s ago');
+      } else if (!sensorOnline) {
+        // Base station online BUT sensor board is offline
+        targetScreen = "sensor_disconnected";
+        debugPrint('⚠️ Sensor board offline, base station online');
+      } else if (status == 'HIGH') {
+        // Everything online but leak detected
+        targetScreen = 'leak';
+      } else {
+        // Everything online and normal
+        targetScreen = 'connected';
+      }
+
+      // Only navigate if we need to switch screens
+      if (_currentScreen != targetScreen) {
+        if (_isFirstCheck) {
+          debugPrint('📍 Initial screen set to: $targetScreen (skipping navigation)');
+          _currentScreen = targetScreen;
+          _isFirstCheck = false;
+        } else {
+          debugPrint('🔄 Status changed: $_currentScreen -> $targetScreen');
+          debugPrint('   Last update: $lastUpdateLocal (Local) / $lastUpdateUTC (UTC)');
+          debugPrint('   Current time: $nowLocal (Local) / $nowUTC (UTC)');
+          debugPrint('   Time diff: ${secondsSinceLastUpdate}s ago (threshold: ${timeoutThreshold}s)');
+          debugPrint('   Sensor online flag: $sensorOnline');
+          debugPrint('   Status: $status');
+          _currentScreen = targetScreen;
+          _navigateToScreen(targetScreen);
+        }
+      } else {
+        if (_isFirstCheck) {
+          _isFirstCheck = false;
+        }
+        debugPrint('✅ Status unchanged: $targetScreen (${secondsSinceLastUpdate}s ago, status: $status, sensor_online: $sensorOnline)');
+      }
+    } on SocketException catch (e) {
+      debugPrint('❌ Network error: $e');
+      _handleError('disconnected', 'Network connection failed');
+    } on TimeoutException catch (e) {
+      debugPrint('❌ Timeout error: $e');
+      _handleError('disconnected', 'Request timeout');
     } catch (error) {
       debugPrint('❌ Status check error: $error');
       _handleError('disconnected', error.toString());
     } finally {
-      _isChecking = false;  // Always reset the flag
+      _isChecking = false; // Always reset the flag
     }
   }
-
 
   // Handle errors consistently
   static void _handleError(String targetScreen, String reason) {
@@ -97,7 +172,6 @@ class StatusMonitor {
   }
 
   // Navigate to the appropriate screen
-  // Replace the _navigateToScreen method (starting at line 158) with this improved version:
   static void _navigateToScreen(String screen) {
     // Use navigatorKey.currentState directly instead of context
     final navigatorState = navigatorKey.currentState;
@@ -125,7 +199,6 @@ class StatusMonitor {
     }
 
     // Use navigatorState directly
-    // In status_monitor.dart, update _navigateToScreen:
     navigatorState.pushAndRemoveUntil(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) => targetWidget,
