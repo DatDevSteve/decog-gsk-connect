@@ -432,21 +432,20 @@ class _PowerControlDialogState extends State<PowerControlDialog> {
   }
 
   Future<void> _updateDatabase(SupabaseClient client, String field, bool value) async {
-    // Get the latest row ID to update
-    final latestRow = await client
-        .from('sensor_live')
-        .select('id')
-        .order('timestamp', ascending: false)
-        .limit(1)
-        .single();
+    try {
+      // ✅ FIXED: Always target id=1 directly (no query needed)
+      final response = await client
+          .from('sensor_live')
+          .update({field: value})
+          .eq('id', 1);
 
-    final id = latestRow['id'];
+      debugPrint('✅ $field updated successfully: $value');
+      debugPrint('   Rows affected: ${response.data?.length ?? 0}');
 
-    // Update the specific field
-    await client
-        .from('sensor_live')
-        .update({field: value})
-        .eq('id', id);
+    } catch (error) {
+      debugPrint('❌ Error updating $field: $error');
+      rethrow;
+    }
   }
 
   Future<SupabaseClient?> _getOtherSupabaseClient(bool currentIsLocal) async {
