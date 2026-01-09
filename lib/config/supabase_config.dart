@@ -105,45 +105,6 @@ class SupabaseConfig {
   static Future<void> initializeSupabase({bool forceReinit = false}) async {
     try {
       bool useLocal = await isUsingLocalHub();
-      bool switched = false;
-      String switchedTo = '';
-
-      // Auto-switch logic (ALWAYS enabled)
-      debugPrint('🔄 Auto-switch checking connectivity...');
-
-      if (!useLocal) {
-        // Try cloud first
-        final cloudReachable = await canReachServer(cloudUrl);  // ✅ FIXED
-        if (!cloudReachable) {
-          debugPrint('⚠️ Cloud unreachable, checking local hub...');
-          final localReachable = await canReachServer(localUrl);  // ✅ FIXED
-          if (localReachable) {
-            debugPrint('✅ Local hub reachable, auto-switching...');
-            useLocal = true;
-            switched = true;
-            switchedTo = 'Local Hub';
-            await setUseLocalHub(true);
-          } else {
-            debugPrint('⚠️ Both cloud and local unreachable');
-          }
-        }
-      } else {
-        // Try local first
-        final localReachable = await canReachServer(localUrl);  // ✅ FIXED
-        if (!localReachable) {
-          debugPrint('⚠️ Local hub unreachable, checking cloud...');
-          final cloudReachable = await canReachServer(cloudUrl);  // ✅ FIXED
-          if (cloudReachable) {
-            debugPrint('✅ Cloud reachable, auto-switching...');
-            useLocal = false;
-            switched = true;
-            switchedTo = 'Cloud Server';
-            await setUseLocalHub(false);
-          } else {
-            debugPrint('⚠️ Both local and cloud unreachable');
-          }
-        }
-      }
 
       final credentials = await getCurrentCredentials();
 
@@ -164,24 +125,21 @@ class SupabaseConfig {
       debugPrint('📡 Using ${useLocal ? "Local Hub (Raspberry Pi)" : "Cloud Server"}');
       debugPrint('🌐 URL: ${credentials['url']}');
 
-      // Notify if auto-switched
-      if (switched && onAutoSwitch != null) {
-        onAutoSwitch!(switchedTo);
-      }
-
-      // Test connection
+      // Test actual database connection (not HTTP HEAD)
       await _testConnection(useLocal);
+
     } catch (e) {
       debugPrint('❌ Supabase initialization error: $e');
       rethrow;
     }
   }
 
+
   // Switch between hub and cloud manually
   static Future<void> switchHub(bool useLocal) async {
     debugPrint('🔄 Manually switching to ${useLocal ? "Local Hub" : "Cloud Server"}...');
-    await setUseLocalHub(useLocal);
-    await initializeSupabase(forceReinit: true);
+    await setUseLocalHub(false);
+    await initializeSupabase(forceReinit: true);  // ✅ No pre-checks
   }
 
   // Get connection status
