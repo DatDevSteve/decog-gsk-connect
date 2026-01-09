@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
 
 class SupabaseConfig {
   // Cloud Supabase credentials
@@ -40,19 +42,64 @@ class SupabaseConfig {
   }
 
   // Check network connectivity to a specific host
-  static Future<bool> canReachHost(String host, int port) async {
+  static Future<bool> canReachServer(String url) async {
     try {
-      final socket = await Socket.connect(
-        host,
-        port,
-        timeout: const Duration(seconds: 3),
+      // Test the /rest/v1/ endpoint (Supabase REST API)
+      final testUrl = url.endsWith('/') ? '${url}rest/v1/' : '$url/rest/v1/';
+
+      final response = await http.head(
+        Uri.parse(testUrl),
+        headers: {
+          'apikey': url.contains('supabase.co') ? cloudAnonKey : localAnonKey,
+        },
+      ).timeout(
+        const Duration(seconds: 4),
+        onTimeout: () => throw TimeoutException('Server timeout'),
       );
-      socket.destroy();
-      return true;
+
+      // Accept any 2xx, 3xx, 401, or 404 (server is reachable)
+      return response.statusCode < 500;
     } catch (e) {
+      debugPrint('   Server test failed: $e');
       return false;
     }
   }
+
+  // Test database connection with timeout
+  static Future<bool> _testConnection(bool isLocal) async {
+    try {
+      debugPrint('🔍 Testing connection to ${isLocal ? "Local" : "Cloud"} database...');
+
+      final response = await Supabase.instance.client
+          .from('sensor_live')
+          .select('timestamp')
+          .eq('id', 1)  // ✅ Use specific row for consistency
+          .single()
+          .timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          throw Exception('Connection timeout');
+        },
+      );
+
+      debugPrint('✅ Database connection test successful');
+      debugPrint('   Retrieved timestamp: ${response['timestamp']}');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Database connection test failed: $e');
+
+      if (e.toString().contains('401')) {
+        debugPrint('   💡 Hint: Authentication error - check your anon key');
+      } else if (e.toString().contains('Failed host lookup') ||
+          e.toString().contains('timeout')) {
+        debugPrint('   💡 Hint: Network/DNS error - check connection or Tailscale');
+      }
+
+      debugPrint('⚠️ Continuing with initialization despite connection test failure');
+      return false;
+    }
+  }
+
 
   // Initialize or reinitialize Supabase with auto-switch ALWAYS enabled
   static Future<void> initializeSupabase({bool forceReinit = false}) async {
@@ -66,10 +113,10 @@ class SupabaseConfig {
 
       if (!useLocal) {
         // Try cloud first
-        final cloudReachable = await canReachHost('mrqxzkaowylemjpqasdw.supabase.co', 443);
+        final cloudReachable = await canReachServer(cloudUrl);  // ✅ FIXED
         if (!cloudReachable) {
           debugPrint('⚠️ Cloud unreachable, checking local hub...');
-          final localReachable = await canReachHost('100.111.59.127', 8000);
+          final localReachable = await canReachServer(localUrl);  // ✅ FIXED
           if (localReachable) {
             debugPrint('✅ Local hub reachable, auto-switching...');
             useLocal = true;
@@ -82,10 +129,10 @@ class SupabaseConfig {
         }
       } else {
         // Try local first
-        final localReachable = await canReachHost('100.111.59.127', 8000);
+        final localReachable = await canReachServer(localUrl);  // ✅ FIXED
         if (!localReachable) {
           debugPrint('⚠️ Local hub unreachable, checking cloud...');
-          final cloudReachable = await canReachHost('mrqxzkaowylemjpqasdw.supabase.co', 443);
+          final cloudReachable = await canReachServer(cloudUrl);  // ✅ FIXED
           if (cloudReachable) {
             debugPrint('✅ Cloud reachable, auto-switching...');
             useLocal = false;
@@ -130,40 +177,6 @@ class SupabaseConfig {
     }
   }
 
-  // Test database connection with timeout
-  static Future<bool> _testConnection(bool isLocal) async {
-    try {
-      debugPrint('🔍 Testing connection to ${isLocal ? "Local" : "Cloud"} database...');
-
-      final response = await Supabase.instance.client
-          .from('sensor_live')
-          .select('timestamp')
-          .limit(1)
-          .timeout(
-        const Duration(seconds: 5),
-        onTimeout: () {
-          throw Exception('Connection timeout');
-        },
-      );
-
-      debugPrint('✅ Database connection test successful');
-      debugPrint('   Retrieved ${response.length} record(s)');
-      return true;
-    } catch (e) {
-      debugPrint('❌ Database connection test failed: $e');
-
-      if (e.toString().contains('401')) {
-        debugPrint('   💡 Hint: Authentication error - check your anon key');
-      } else if (e.toString().contains('Failed host lookup') ||
-          e.toString().contains('timeout')) {
-        debugPrint('   💡 Hint: Network/DNS error - check connection or Tailscale');
-      }
-
-      debugPrint('⚠️ Continuing with initialization despite connection test failure');
-      return false;
-    }
-  }
-
   // Switch between hub and cloud manually
   static Future<void> switchHub(bool useLocal) async {
     debugPrint('🔄 Manually switching to ${useLocal ? "Local Hub" : "Cloud Server"}...');
@@ -174,8 +187,8 @@ class SupabaseConfig {
   // Get connection status
   static Future<Map<String, dynamic>> getConnectionStatus() async {
     final useLocal = await isUsingLocalHub();
-    final cloudReachable = await canReachHost('mrqxzkaowylemjpqasdw.supabase.co', 443);
-    final localReachable = await canReachHost('100.111.59.127', 8000);
+    final cloudReachable = await canReachServer(cloudUrl);  // ✅ FIXED
+    final localReachable = await canReachServer(localUrl);  // ✅ FIXED
 
     return {
       'current': useLocal ? 'local' : 'cloud',

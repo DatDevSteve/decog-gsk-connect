@@ -509,7 +509,7 @@ class _PowerControlDialogState extends State<PowerControlDialog> {
                   color: Color.fromRGBO(215, 162, 101, 1),
                 ),
               )
-            else ..[
+            else ...[
               // Fan Control
               _buildControlRow(
                 icon: Icons.mode_fan_off_outlined,

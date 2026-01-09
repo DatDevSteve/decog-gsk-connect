@@ -56,8 +56,8 @@ class StatusMonitor {
       final response = await supabase
           .from('sensor_live')
           .select('timestamp, status, sensor_online')
-          .order('timestamp', ascending: false)
-          .limit(1)
+          .eq('id', 1)       // ✅ Only get row with id=1
+          .single()          // ✅ Get single row
           .timeout(
         const Duration(seconds: 5),
         onTimeout: () {
@@ -85,7 +85,7 @@ class StatusMonitor {
         return;
       }
 
-      final data = response.first;
+      final data = response;
       final String timestampStr = data['timestamp'] as String;
       final DateTime lastUpdateUTC = DateTime.parse(timestampStr).toUtc();
       final DateTime nowUTC = DateTime.now().toUtc();

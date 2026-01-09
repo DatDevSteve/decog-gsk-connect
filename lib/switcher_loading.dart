@@ -30,11 +30,12 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
 
   Future<void> _checkDeviceStatus() async {
     try {
+      // ✅ FORCE FRESH DATA - Disable cache and explicitly filter by id=1
       final response = await supabase
           .from("sensor_live")
           .select('timestamp, status, sensor_online')
-          .order('timestamp', ascending: false)
-          .limit(1)
+          .eq('id', 1)  // ✅ CRITICAL: Only get row with id=1
+          .single()      // ✅ Get single row (not array)
           .timeout(
         const Duration(seconds: 5),
         onTimeout: () {
@@ -44,19 +45,13 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
 
       if (!mounted) return;
 
-      if (response.isEmpty) {
-        debugPrint('⚠️ No data in sensor_live table');
-        _navigateToDisconnected();  // Base station never connected
-        return;
-      }
-
-      final data = response.first;
-      final String timestampStr = data['timestamp'] as String;
+      // ✅ response is now a Map, not an array
+      final String timestampStr = response['timestamp'] as String;
       final DateTime lastUpdateUTC = DateTime.parse(timestampStr).toUtc();
       final DateTime nowUTC = DateTime.now().toUtc();
 
-      final bool sensorOnline = data['sensor_online'] ?? false;
-      final String status = (data['status'] as String? ?? 'NORMAL').toUpperCase();
+      final bool sensorOnline = response['sensor_online'] ?? false;
+      final String status = (response['status'] as String? ?? 'NORMAL').toUpperCase();
 
       final int secondsSinceLastUpdate = nowUTC.difference(lastUpdateUTC).inSeconds;
 
@@ -67,68 +62,43 @@ class _LoadingSwitchState extends State<LoadingSwitch> {
       debugPrint('   Timeout threshold: ${timeoutThreshold}s');
       debugPrint('   Sensor online flag: $sensorOnline');
       debugPrint('   Status: $status');
+      debugPrint('🔍 RAW DEBUG:');
+      debugPrint('   Raw timestamp string: "$timestampStr"');
+      debugPrint('   Parsed UTC: $lastUpdateUTC');
+      debugPrint('   Current UTC: $nowUTC');
+      debugPrint('   Difference: $secondsSinceLastUpdate seconds');
+      debugPrint('   Threshold: $timeoutThreshold seconds');
 
       final bool baseStationOnline = secondsSinceLastUpdate <= timeoutThreshold;
 
-      // *** FIXED LOGIC ***
       if (!baseStationOnline) {
-        // Base station is offline (data too old)
         debugPrint('➡️ Navigating to: DisconnectedDev (base station offline - ${secondsSinceLastUpdate}s ago)');
         _navigateToDisconnected();
       } else if (!sensorOnline) {
-        // Base station online BUT sensor board offline
         debugPrint('➡️ Navigating to: SensorDisconnected (sensor board offline, base online)');
         _navigateToSensorDisconnected();
       } else if (status == 'HIGH') {
-        // Everything online but gas leak detected
         debugPrint('➡️ Navigating to: LeakScreen (HIGH status detected)');
         _navigateToLeak();
       } else {
-        // Everything online and normal
         debugPrint('➡️ Navigating to: DashboardScreen (all systems normal)');
         _navigateToDashboard();
       }
+    } on PostgrestException catch (error) {
+      debugPrint('❌ Supabase error: ${error.message}');
+      if (!mounted) return;
+      _navigateToDisconnected();
     } on SocketException catch (error) {
       debugPrint('❌ Network error checking device status: $error');
-
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Network error: Check your internet connection or Tailscale'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
-        ),
-      );
-
       _navigateToDisconnected();
     } on TimeoutException catch (error) {
       debugPrint('❌ Timeout error checking device status: $error');
-
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Connection timeout: Database is not responding'),
-          backgroundColor: Colors.orange,
-          duration: Duration(seconds: 3),
-        ),
-      );
-
       _navigateToDisconnected();
     } catch (error) {
       debugPrint('❌ Error checking device status: $error');
-
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $error'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-
       _navigateToDisconnected();
     }
   }
