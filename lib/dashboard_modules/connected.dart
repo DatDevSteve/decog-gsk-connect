@@ -433,20 +433,25 @@ class _PowerControlDialogState extends State<PowerControlDialog> {
 
   Future<void> _updateDatabase(SupabaseClient client, String field, bool value) async {
     try {
-      // ✅ FIXED: Always target id=1 directly (no query needed)
+      debugPrint('🔄 Updating $field = $value for id=1');
+
+      // ✅ SIMPLEST SYNTAX: Direct await, no response handling
       final response = await client
           .from('sensor_live')
           .update({field: value})
           .eq('id', 1);
 
-      debugPrint('✅ $field updated successfully: $value');
-      debugPrint('   Rows affected: ${response.data?.length ?? 0}');
+      debugPrint('✅ $field = $value → SUCCESS (response: $response)');
 
+    } on PostgrestException catch (error) {
+      debugPrint('❌ Postgrest error: ${error.message}');
+      rethrow;
     } catch (error) {
-      debugPrint('❌ Error updating $field: $error');
+      debugPrint('❌ Generic error updating $field: $error');
       rethrow;
     }
   }
+
 
   Future<SupabaseClient?> _getOtherSupabaseClient(bool currentIsLocal) async {
     try {
