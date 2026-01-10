@@ -1,5 +1,5 @@
 import 'package:decog_gsk/device_list.dart';
-import 'package:decog_gsk/diagnosis_page.dart';
+import 'package:decog_gsk/settings_page.dart';
 import 'package:decog_gsk/status_monitor.dart';
 import 'package:decog_gsk/switcher_loading.dart';
 import 'package:flutter/material.dart';

@@ -1,6 +1,6 @@
 import 'package:decog_gsk/device_list.dart';
 import 'dart:async';
-import 'package:decog_gsk/diagnosis_page.dart';
+import 'package:decog_gsk/settings_page.dart';
 import 'package:decog_gsk/switcher_loading.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
